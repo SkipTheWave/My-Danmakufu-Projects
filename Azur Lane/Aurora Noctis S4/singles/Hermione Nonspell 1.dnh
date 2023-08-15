@@ -1,0 +1,103 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis S4 - Hermione Nonspell 1"]
+#Text["Azur Lane - Aurora Noctis[r]Stage 4 Boss"]
+#BGM["./../music/Battlefield.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+
+let objBoss;
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(4500); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(35); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(250000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), GetCenterY() - 80, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "../images/HermioneChibi.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 71, 74); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(90);
+	main;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	SetAutoDeleteObject(true);
+	killBossPhase(objBoss);
+	wait(120);
+	CloseScript(GetOwnScriptID());
+}
+
+
+
+
+task main {
+	while(!Obj_IsDeleted(objBoss)) {
+		shootA(1);
+		wait(60);
+		moveX(GetCenterX() - 120);
+		shootA(-1);
+		wait(60);
+		moveX(GetCenterX());
+		wait(120);
+		
+		shootA(-1);
+		wait(60);
+		moveX(GetCenterX() + 120);
+		shootA(1);
+		wait(60);
+		moveX(GetCenterX());
+		shootA(-1);
+		wait(240);
+	}
+}
+
+task moveX(x) {
+	ObjMove_SetDestAtWeight(objBoss, x, GetCenterY() - 80, 45, 3);
+}
+
+task shootA(dir) {		// takes 50 frames total
+	let angleT = 0;
+	loop(12) {
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+		PlaySound("Twinkle1", 50, 10);
+		ascent(i in 0..4) {
+			ascent(j in 0..6) {
+				let obj = CreateShotA2(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 
+					4 + j/2.5, angleT + i*360/4, -0.15, 0, 266, 10);
+				ObjMove_AddPatternA3(obj, 45, 0, NO_CHANGE, +0.04, 0.18*dir, 1.2 + j/3, 263);
+			}
+		}
+		angleT += 9*dir;
+		wait(9);
+	}
+}
+
+
+

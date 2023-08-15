@@ -1,0 +1,121 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["Hanayo Non-Spell 2"]
+#Text["Hanayo Non-Spell 2"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+
+#include"script/default_system/Default_ShotConst.txt"
+
+let objBoss;
+let objShot;
+let shotSE = "SFX/SFX/ATTACK4.wav";
+let explodeSE = "SFX/SFX/ATTACK3.wav";
+let spiralSE = "SFX/SFX/TWINKLE.wav";
+
+@Event{
+		alternative(GetEventType())
+	case(EV_REQUEST_LIFE){
+		SetScriptResult(5000);
+        }
+	case(EV_REQUEST_TIMER){
+		SetScriptResult(45);
+	}
+	case(EV_REQUEST_SPELL_SCORE){
+		SetScriptResult(600000);
+	}
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	
+	TDrawLoop;
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX, 120, 60);
+	
+	LoadSound(shotSE);
+	LoadSound(explodeSE);
+	LoadSound(spiralSE);
+	
+	TFinalize;
+	MainTask;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss,INFO_LIFE)>0){yield;}
+	Obj_Delete(objBoss);
+	DeleteShotAll(TYPE_ALL,TYPE_IMMEDIATE);
+	SetAutoDeleteObject(true);
+	CloseScript(GetOwnScriptID());
+	return;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss,ObjMove_GetX(objBoss),ObjMove_GetY(objBoss),40);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss,ObjMove_GetX(objBoss),ObjMove_GetY(objBoss),40);
+	
+	yield;
+}
+
+function GetCenterX{
+     return GetStgFrameWidth/2;
+ }
+function GetCenterY{
+     return GetStgFrameHeight/2;
+ }
+function wait(n){loop(n){yield;}}
+ 
+ task TDrawLoop {
+	let imgExRumia = GetCurrentScriptDirectory ~ "Hanayo.png";
+	ObjPrim_SetTexture(objBoss, imgExRumia);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 70, 118);
+	ObjSprite2D_SetDestCenter(objBoss);
+ }
+ 
+ task MainTask {
+	 
+	wait(180);
+	
+	while(ObjEnemy_GetInfo(objBoss,INFO_LIFE)>0){
+		movement;
+		let angleR = rand(0,360);
+		ascent (i in 0..40){
+			ShotA(angleR+i*9);
+			wait(1);
+		}
+		wait(180);
+	}
+ }
+ 
+ task ShotA(angle) {
+	 
+	let objTimer = 0;
+	 
+	let obj = CreateShotA2(ObjMove_GetX(objBoss),ObjMove_GetY(objBoss),5,angle,-0.1,0.2,90,0);
+	PlaySE(spiralSE);
+	 
+	while (!Obj_IsDeleted(obj)) {
+		let angleR = rand(0,360);
+		objTimer++;
+		
+		if (objTimer == 120) {
+			PlaySE(spiralSE);
+			loop(4) {
+				CreateShotA2(ObjMove_GetX(obj),ObjMove_GetY(obj),0.2,rand(0,360),0.02,rand(1,3),162,30);
+				CreateShotA2(ObjMove_GetX(obj),ObjMove_GetY(obj),0.2,rand(0,360),0.02,rand(1,3),162,20);
+			}
+			CreateShotA2(ObjMove_GetX(obj),ObjMove_GetY(obj),0.2,angle,0.1,5,83,15);
+			CreateShotA2(ObjMove_GetX(obj),ObjMove_GetY(obj),0.2,angle,0.08,4,82,15);
+			CreateShotA2(ObjMove_GetX(obj),ObjMove_GetY(obj),0.2,angle,0.06,3,82,15);
+			Obj_Delete(obj);
+		}
+		yield;
+	}
+}
+ 
+task movement {
+    wait(120);
+	ObjMove_SetDestAtFrame(objBoss, rand(GetCenterX+150,GetCenterX-150), rand(GetCenterY-80,GetCenterY-200), 60);
+}
+

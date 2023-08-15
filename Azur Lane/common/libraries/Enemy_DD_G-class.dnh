@@ -1,0 +1,161 @@
+// enemy constants
+let hitboxDDG = 34;
+
+// angle is angle, spd is initial speed, frames are the amount of frames it takes to halt
+task CreateEnemyDDGA(x, y, spd, angle, difficulty) { 
+    let objEnemy = CreateEnemyDDG(x, y, 70, 2);
+    movementContA(objEnemy, spd, angle);
+    alternative (difficulty)
+    case (0) {      // Easy
+        DDGBulletA(objEnemy, 1, 1, 40, 60, 90);
+    }
+    case (1) {      // Normal
+        DDGBulletA(objEnemy, 2, 2, 35, 45, 75);
+    }
+    case (2) {      // Hard
+        DDGBulletA(objEnemy, 3, 2.5, 30, 30, 60);
+    }
+    case (3) {        // Lunatic
+        DDGBulletA(objEnemy, 4, 2.7, 25, 25, 45);
+    }
+}
+
+task CreateEnemyDDGA2(x, y, spd, angle, difficulty) { 
+    let objEnemy = CreateEnemyDDG(x, y, 100, 3);
+    movementContA(objEnemy, spd, angle);
+    alternative (difficulty)
+    case (0) {      // Easy
+        DDGBulletA2(objEnemy, 120, 1.2, 1);
+    }
+    case (1) {      // Normal
+        DDGBulletA2(objEnemy, 60, 1.7, 1);
+    }
+    case (2) {      // Hard
+        DDGBulletA2(objEnemy, 35, 2, 3);
+    }
+    case (3) {        // Lunatic
+        DDGBulletA2(objEnemy, 30, 2.2, 5);
+    }
+}
+
+task CreateEnemyDDGB(x, y, spd, angle, difficulty) { 
+    let objEnemy = CreateEnemyDDG(x, y, 50, 2);
+    movementContA(objEnemy, spd, angle);
+    alternative (difficulty)
+    case (0) {      // Easy
+        DDGBulletB(objEnemy, 6, 1.5, 70, 0);
+    }
+    case (1) {      // Normal
+        DDGBulletB(objEnemy, 12, 1.5, 60, 1.5);
+    }
+    case (2) {      // Hard
+        DDGBulletB(objEnemy, 18, 1.5, 40, 3);
+    }
+    case (3) {        // Lunatic
+        DDGBulletB(objEnemy, 30, 2, 30, 5);
+    }
+}
+
+// enemy turns around and goes back after 'straightTime' frames, turns around with 'wvel' angular velocity
+task CreateEnemyDDGC(x, y, spd, angle, straightTime, wvel, difficulty) { 
+    let objEnemy = CreateEnemyDDG(x, y, 50, 2);
+    movementUTurnA(objEnemy, spd, angle, straightTime, wvel);
+    alternative(difficulty)
+    case (0) {      // Easy
+        DDGBulletC(objEnemy, straightTime, 1, 1.5);
+    }
+    case (1) {      // Normal
+        DDGBulletC(objEnemy, straightTime, 3, 2);    
+    }
+    case (2) {      // Hard
+        DDGBulletC(objEnemy, straightTime, 5, 2.5);   
+    }
+    case (3) {        // Lunatic
+        DDGBulletC(objEnemy, straightTime, 9, 3.5);    
+    }
+}
+
+// enemy spawns at centerY, does a pseudo-semicircle upwards, ends at centerY again
+task CreateEnemyDDGC2(x, dir, travelTime, difficulty) { 
+    let objEnemy = CreateEnemyDDG(x, GetCenterY()/2 + 100, 30, 1);
+    movementSemiCircleA(objEnemy, dir, travelTime);
+    let shotTime = rand(travelTime/6, travelTime/2);
+    alternative(difficulty)
+    case (0) {      // Easy
+        DDGBulletC(objEnemy, shotTime, 0, 0);
+    }
+    case (1) {      // Normal
+        DDGBulletC(objEnemy, shotTime, 1, 0.8);    
+    }
+    case (2) {      // Hard
+        DDGBulletC(objEnemy, shotTime, 3, 1);   
+    }
+    case (3) {        // Lunatic
+        DDGBulletC(objEnemy, shotTime, 5, 1.2);    
+    }
+}
+
+
+/* Base enemy */
+function CreateEnemyDDG(x, y, life, points) {
+    return CreateEnemy(x, y, life, imgHMS, 46, 25, 46+82, 25+53, hitboxDDG, points);
+}
+
+
+/* Bullet tasks */
+task DDGBulletA(objEnemy, nshots, spd, angleDiff, wait1, wait2) {              // 
+    let angleT1 = -20;
+    let angleT2 = 200;
+/*     let angleDiff = 35; */
+
+    wait(rand_int(20, 40));
+    while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) > 0) {
+        ascent(i in 0..nshots) {
+            CreateShotA1(ObjMove_GetX(objEnemy), ObjMove_GetY(objEnemy), spd+i*spd/15, angleT1, 47, 10);
+            CreateShotA1(ObjMove_GetX(objEnemy), ObjMove_GetY(objEnemy), spd+i*spd/15, angleT2, 47, 10);
+        }
+        angleT1 += angleDiff;
+        angleT2 -= angleDiff;
+        wait(rand_int(wait1, wait2));
+    }
+}
+
+//Easy/Normal ver
+task DDGBulletA2(objEnemy, interval, spd, nshots) {
+    let lowBound = -floor(nshots/2);
+    let upBound = ceil(nshots/2);
+    let angleDev = 0;
+    if(nshots > 1) {
+        angleDev = 110/(nshots - 1);
+    }
+    while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) > 0) {
+        ascent(i in lowBound..upBound) {
+            CreateShotA1(ObjMove_GetX(objEnemy), ObjMove_GetY(objEnemy), spd, 90 + i*angleDev, 134, 10);
+        }
+        wait(interval);
+    }
+}
+
+task DDGBulletB(objEnemy, nshots, spd, maxAngleDev, maxAngleDev2) {              // 
+/*     let nshots = 14; */
+    let angleDev = rand(-maxAngleDev, maxAngleDev);
+
+    wait(rand_int(30, 90));
+    if(Obj_IsDeleted(objEnemy)) { return; }
+    ascent(i in 0..nshots) {
+        let angleDev2 = rand(-maxAngleDev2, maxAngleDev2);
+        let obj = CreateShotA2(ObjMove_GetX(objEnemy), ObjMove_GetY(objEnemy), 4, i*360/nshots, -0.15, 0, 54, 15);
+        ObjMove_AddPatternA4(obj, 120, spd, angleDev+angleDev2, 0, 0, spd, GetPlayerObjectID(), NO_CHANGE);
+    }
+}
+
+task DDGBulletC(objEnemy, waitF, nshots, spd) {
+/*     let nshots = 5; */
+    let angleSpace = 2;
+
+    wait(waitF);
+    if(Obj_IsDeleted(objEnemy)) { return; }
+    ascent(i in -floor(nshots/2) .. ceil(nshots/2)) {
+        CreateShotA1(ObjMove_GetX(objEnemy), ObjMove_GetY(objEnemy), spd, GetAngleToPlayer(objEnemy) + i*angleSpace, 11, 10);
+    }
+}

@@ -1,0 +1,137 @@
+// enemy constants
+let hitboxLeander = 30;
+
+// angle is angle, spd is initial speed, stopFrames are the amount of frames it takes to halt
+task CreateEnemyLeanderA(x, y, spd, angle, stopFrames, stayFrames, difficulty) { 
+    let objEnemy = CreateEnemyLeander(x, y, 1800, 20);
+    movementUTurnB(objEnemy, spd, angle, stopFrames, stayFrames);
+    alternative (difficulty)
+    case (0) {      // Easy
+        LeanderBulletA(objEnemy, 2, 11, 0.8, 9, 1.2);
+    }
+    case (1) {      // Normal
+        LeanderBulletA(objEnemy, 2, 6, 1.1, 6, 1.4);
+    }
+    case (2) {      // Hard
+        LeanderBulletA(objEnemy, 4, 7, 1.5, 4, 1.3);
+    }
+    case (3) {        // Lunatic
+        LeanderBulletA(objEnemy, 6, 5, 1.3, 3, 1.5);     // TODO USE THAT BEAUTIFUL EFFECT LATER ON
+    }
+    //LeanderBulletA(objEnemy, nlines, shotWait, spd, angleDev, wvelAbs)
+}
+
+task CreateEnemyLeanderA2(x, y, spd, angle, stopFrames, stayFrames, difficulty) { 
+    let objEnemy = CreateEnemyLeander(x, y, 2200, 28);
+    movementUTurnB(objEnemy, spd, angle, stopFrames, stayFrames);
+    alternative (difficulty)
+    case (0) {      // Easy
+        LeanderBulletA2(objEnemy, 3, 11, 0.8, 9, 1.2);
+    }
+    case (1) {      // Normal
+        LeanderBulletA2(objEnemy, 4, 6, 1.1, 6, 1.4);
+    }
+    case (2) {      // Hard
+        LeanderBulletA2(objEnemy, 6, 3, 2, 1.7, 0.8);
+    }
+    case (3) {        // Lunatic
+        LeanderBulletA2(objEnemy, 8, 2, 2, 1.2, 0.9);
+    }
+    //LeanderBulletA(objEnemy, nlines, shotWait, spd, angleDev, wvelAbs)
+}
+
+// angle is angle, spd is initial speed, stopFrames are the amount of frames it takes to halt
+task CreateEnemyLeanderC(x, y, spd, angle, stopFrames, stayFrames, difficulty) { 
+    let objEnemy = CreateEnemyLeander(x, y, 600, 18);
+    movementUTurnB(objEnemy, spd, angle, stopFrames, stayFrames);
+    alternative (difficulty)
+    case (0) {      // Easy
+        LeanderBulletA(objEnemy, 2, 11, 0.8, 9, 1.2);
+    }
+    case (1) {      // Normal
+        LeanderBulletA(objEnemy, 2, 6, 1.1, 6, 1.4);
+    }
+    case (2) {      // Hard
+        //obj, nlines, interval, spd, angleshift, wvel
+        LeanderBulletA3(objEnemy, 10, 2, 1.4, 0.8, 1.5);     
+    }
+    case (3) {        // Lunatic
+        LeanderBulletA(objEnemy, 6, 5, 1.3, 3, 1.5);     // TODO USE THAT BEAUTIFUL EFFECT LATER ON
+    }
+    //LeanderBulletA(objEnemy, nlines, shotWait, spd, angleDev, wvelAbs)
+}
+
+/* Base enemy */
+function CreateEnemyLeander(x, y, life, points) {
+    return CreateEnemy(x, y, life, imgLeander, 1, 1, 60, 70, hitboxLeander, points);
+}
+
+/* Bullet tasks */
+// slow, flexible, yellow/aqua
+task LeanderBulletA(objEnemy, nlines, shotWait, spd, angleDev, wvelAbs) {
+/*     let nlines = 4; */
+/*     let spd = 1.5;
+    let wvelAbs = 1.4; */
+    let counter = 0;
+    let graphic;
+    let wvel;
+    
+    wait(90);
+    while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) > 0 && ObjMove_GetY(objEnemy) > 80) {
+        ascent(i in 0..nlines) {
+            if(counter % 2 == 0) { graphic = 89; wvel = wvelAbs; }
+            if(counter % 2 == 1) { graphic = 93; wvel = -wvelAbs; }
+            let obj = CreateShotA2(ObjMove_GetX(objEnemy), ObjMove_GetY(objEnemy), spd, i*(360/nlines) + angleDev*counter,
+                 0, spd, graphic, 0);
+            ObjMove_AddPatternA2(obj, rand(20, 70), NO_CHANGE, NO_CHANGE, 0, wvel, NO_CHANGE);
+            ObjMove_AddPatternA2(obj, rand_int(90, 120), NO_CHANGE, NO_CHANGE, 0, 0, NO_CHANGE);
+        }
+        counter++;
+        wait(shotWait);
+    }
+}
+
+// faster, makes you spin, red/orange
+task LeanderBulletA2(objEnemy, nlines, shotWait, spd, angleDev, wvelAbs) {
+    let counter = 0;
+    let graphic;
+    let wvel;
+    
+    wait(90);
+    while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) > 0 && ObjMove_GetY(objEnemy) > 80) {
+        ascent(i in 0..nlines) {
+            if(counter % 2 == 0) { graphic = 82; wvel = wvelAbs; }
+            if(counter % 2 == 1) { graphic = 95; wvel = -wvelAbs; }
+            let obj = CreateShotA2(ObjMove_GetX(objEnemy), ObjMove_GetY(objEnemy), spd, i*(360/nlines) + angleDev*counter,
+                 0, spd, graphic, 0);
+            ObjMove_AddPatternA2(obj, rand(10, 15), NO_CHANGE, NO_CHANGE, 0, wvel, NO_CHANGE);
+            ObjMove_AddPatternA2(obj, rand_int(140, 150), NO_CHANGE, NO_CHANGE, 0, 0, NO_CHANGE);
+        }
+        counter++;
+        wait(shotWait);
+    }
+}
+
+// pink/yellow, don't spin
+task LeanderBulletA3(objEnemy, nlines, shotWait, spd, angleDev, wvelAbs) {
+/*     let nlines = 4; */
+/*     let spd = 1.5;
+    let wvelAbs = 1.4; */
+    let counter = 0;
+    let graphic;
+    let wvel;
+    
+    wait(90);
+    while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) > 0 && ObjMove_GetY(objEnemy) > 80) {
+        ascent(i in 0..nlines) {
+            if(counter % 2 == 0) { graphic = 85; wvel = wvelAbs; }
+            if(counter % 2 == 1) { graphic = 93; wvel = -wvelAbs; }
+            let obj = CreateShotA2(ObjMove_GetX(objEnemy), ObjMove_GetY(objEnemy), spd, i*(360/nlines) + angleDev*counter,
+                 0, spd, graphic, 0);
+            ObjMove_AddPatternA2(obj, rand(5, 20), NO_CHANGE, NO_CHANGE, 0, wvel, NO_CHANGE);
+            ObjMove_AddPatternA2(obj, rand_int(90, 120), NO_CHANGE, NO_CHANGE, 0, 0, NO_CHANGE);
+        }
+        counter++;
+        wait(shotWait);
+    }
+}

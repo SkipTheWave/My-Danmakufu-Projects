@@ -1,0 +1,25 @@
+
+let SFXdir = GetCurrentScriptDirectory() ~ "../sfx/";
+
+task PlaySound(str, volume, delay) {
+	let s = ObjSound_Create();
+	if(str == "Defeat"){ObjSound_Load(s,SFXdir~"./DEFEATED.wav");}
+	if(str == "Atk1"){ObjSound_Load(s,SFXdir~"./ATTACK.wav");}
+	if(str == "Atk2"){ObjSound_Load(s,SFXdir~"./ATTACK2.wav");}
+	if(str == "Atk3"){ObjSound_Load(s,SFXdir~"./ATTACK3.wav");}
+	if(str == "Atk4"){ObjSound_Load(s,SFXdir~"./ATTACK4.wav");}
+	if(str == "Atk5"){ObjSound_Load(s,SFXdir~"./ATTACK5.wav");}
+	if(str == "Twinkle1"){ObjSound_Load(s,SFXdir~"./TWINKLE.wav");}
+	if(str == "Twinkle2"){ObjSound_Load(s,SFXdir~"./TWINKLE2.wav");}
+	if(str == "Twinkle3"){ObjSound_Load(s,SFXdir~"./TWINKLE3.wav");}
+	if(str == "Laser1"){ObjSound_Load(s,SFXdir~"./LASER.wav");}
+	if(str == "Laser2"){ObjSound_Load(s,SFXdir~"./LASER2.wav");}
+	if(str == "Laser3"){ObjSound_Load(s,SFXdir~"./GUN.wav");}
+	if(str == "Charge"){ObjSound_Load(s,SFXdir~"./POWER UP.wav");}
+	
+	loop(delay) { yield; }
+	ObjSound_SetSoundDivision(s,SOUND_SE);
+	ObjSound_SetVolumeRate(s,volume);
+	ObjSound_Play(s);
+}
+

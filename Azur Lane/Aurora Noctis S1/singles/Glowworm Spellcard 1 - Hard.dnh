@@ -1,0 +1,148 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis S1 - Glowworm Spellcard - Hard"]
+#Text["Azur Lane - Aurora Noctis[r]Stage 1 Miniboss[r]\"Glowworm - Meteor Slam\""]
+#BGM["./../music/Frozen Eternal Capital.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+#include "script/Cutin/Cutin.txt"
+
+let dir = GetCurrentScriptDirectory();
+let objBoss;
+let objScene = GetEnemyBossSceneObjectID();
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(2500); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(28); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(150000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	StartSpell;
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 150, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = dir ~ "../images/GlowwormChibi.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 65, 74); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(120);
+	comet;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	
+	// this part only applies to spellcards, it's the spellcard bonus
+	if(ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SHOOTDOWN_COUNT)
+    +ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SPELL_COUNT) == 0){
+		AddScore(ObjEnemyBossScene_GetInfo(objScene, INFO_SPELL_SCORE));
+	}
+	SetAutoDeleteObject(true);
+	killBoss(objBoss);
+	wait(180);
+	CloseScript(GetOwnScriptID());
+}
+
+task StartSpell {
+	let cutin = dir~"../images/Glowworm.png";
+	ObjCutin_SetSpellcardS4("Glowworm - Meteor Slam", cutin, NAZRIN, 110, 190, 240);
+	ObjCutin_LaunchS3(NAZRIN, cutin, "Hard");
+	ObjEnemyBossScene_StartSpell(objScene);
+}
+
+
+
+
+task comet {
+	PlaySound("Charge", 60, 0);
+	ObjMove_SetDestAtWeight(objBoss, GetCenterX(), 50, 30, 6);
+	wait(60);
+	if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0){return;}
+	ObjMove_SetDestAtSpeed(objBoss, GetCenterX(), GetStgFrameHeight() - 10, 5);
+	
+	stars(objBoss);
+	while(objInField(objBoss)) { yield; }
+	
+	starCollision;
+	ScreenShakeA1(15, 15);
+	wait(120);
+
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		ObjMove_SetDestAtWeight(objBoss, GetCenterX(), GetCenterY(), 30, 5);
+		wait(45);
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0){return;}
+		ObjMove_AddPatternA2(objBoss, 0, 0, GetAngleToPlayer(objBoss), +0.2, 0, 7);
+
+		stars(objBoss);
+		while(objInField(objBoss)) { yield;	}
+		
+		ObjMove_AddPatternA2(objBoss, 0, 0, GetAngleToPlayer(objBoss), 0, 0, 0);
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0){return;}
+		starCollision;
+		ScreenShakeA1(15, 15);
+		wait(120);
+	}
+}
+
+task stars(obj) {
+	let angleA = ObjMove_GetAngle(objBoss) + 220;
+	let angleB = ObjMove_GetAngle(objBoss) + 140;
+	PlaySound("Twinkle1", 80, 10);
+	while(objInField(obj) && ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		let objX = ObjMove_GetX(obj);
+		let objY = ObjMove_GetY(obj);
+		ascent(j in 0..2) {
+			ascent(i in 1..4) {
+				let angle = angleA;
+				if (j == 1) { angle = angleB; }
+				let objS = CreateShotA1(objX, objY, i*0.25, angle, S_STAR_YELLOW, 5);
+				ObjMove_AddPatternA2(objS, 120, NO_CHANGE, NO_CHANGE, i*0.03, 0, 3);
+			}
+		}
+		angleA += 11;
+		angleB -= 11;
+		wait(6);
+	}
+}
+
+task starCollision {
+	if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0){return;}
+	let bossX = ObjMove_GetX(objBoss);
+	let bossY = ObjMove_GetY(objBoss);
+	let angleT = 0;
+	PlaySound("Atk3", 60, 0);
+	loop(15) {
+		let obj = CreateShotA2(bossX, bossY, 6, angleT, -0.3, 0.4, STAR_YELLOW, 0);
+		delete(obj, 120);
+		angleT += 360/15;
+	}
+	loop(50) {
+		let obj = CreateShotA2(bossX, bossY, rand(3, 6), rand(0, 359), -0.3, 0.3, 
+			[44, 46, 48][rand_int(0, 2)], 0);
+		delete(obj, 120);
+	}
+}
+
+
+

@@ -1,0 +1,119 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["Elementalist Spellcard 1 - Elemental Curtain"]
+#Text[""]
+#BGM["./Pathway.mp3"]
+#include "script/default_system/Default_ShotConst.txt"
+#include "script/Cutin/Cutin.txt"
+
+let objBoss;
+let objScene = GetEnemyBossSceneObjectID();
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(6000); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(50); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(100000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	StartSpell;
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 120, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "elementalist(overmind)-sprite.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 75, 114); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(60);
+	fireCurtain;
+	wait(60);
+	fireElements;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	
+	// this part only applies to spellcards, it's the spellcard bonus
+	if(ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SHOOTDOWN_COUNT)
+    +ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SPELL_COUNT) == 0){
+		AddScore(ObjEnemyBossScene_GetInfo(objScene, INFO_SPELL_SCORE));
+	}
+	
+	Obj_Delete(objBoss);
+	DeleteShotAll(TYPE_ALL, TYPE_IMMEDIATE);
+	SetAutoDeleteObject(true);
+	CloseScript(GetOwnScriptID());
+}
+
+task StartSpell {
+	let cutin = GetCurrentScriptDirectory~"elementalist(overmind)-t.png";
+	ObjCutin_SetSpellcardS4("Elementalist - Elemental Curtain", cutin, NAZRIN, 110, 190, 240);
+	ObjCutin_LaunchS3(YABUSAME, cutin, "Normal");
+	ObjEnemyBossScene_StartSpell(objScene);
+}
+
+function GetCenterX(){ return GetStgFrameWidth() / 2; }		// 384 / 2
+function GetCenterY(){ return GetStgFrameHeight() / 2; }	// 448 / 2
+function wait(n){ loop(n){yield;} }
+
+task fireCurtain {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		let heightStep = GetStgFrameHeight/14;
+		ascent(i in 0..7) {
+			let obj = CreateShotA1(GetStgFrameWidth-1, heightStep*i + 10, 1.25, 180, DS_SCALE_WHITE - i, 30);
+			let obj2 = CreateShotA1(GetStgFrameWidth-1, heightStep*i + GetCenterY + 10, 1.25, 180, DS_SCALE_WHITE - i, 30);
+			curtainMovements(obj);
+			curtainMovements(obj2);
+		}
+		
+		wait(25);
+	}
+}
+
+task curtainMovements(obj) {
+		ObjMove_SetAngularVelocity(obj, -0.2);
+		wait(120);
+		ObjMove_SetAngularVelocity(obj, 0.2);
+}
+
+task fireElements {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		ascent(i in 0..6) {
+			CreateShotA1(1, GetPlayerY(), 0.75+i*0.25, rand(-10, 10), DS_FIRE_RED, 60);
+		}
+		wait(120);
+		loop(10) {
+			CreateShotB2(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), rand(-2, 2), -3, 0, 0.05, 2, 4, DS_ICE_BLUE, 15);
+			wait(5);
+		}
+		wait(70);
+		ascent(i in 0..6) {
+			CreateShotA1(1, GetPlayerY(), 1.4+i*0.7, rand(-5, 5), DS_STAR_S_YELLOW, 60);
+		}
+		wait(120);
+		loop(20) {
+			CreateShotB2(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), rand(-2, 2), -2.5, 0, 0.05, 2, 2, DS_LIGHT_PURPLE, 15);
+			wait(5);
+		}
+		wait(20);
+	}
+}

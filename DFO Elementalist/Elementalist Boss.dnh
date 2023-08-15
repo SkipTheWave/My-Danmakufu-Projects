@@ -1,0 +1,56 @@
+#TouhouDanmakufu[Plural]
+#ScriptVersion[3]
+#Title["Elementalist Boss"]
+#Text[""]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+
+
+let dir = GetCurrentScriptDirectory();
+let BGMboss = dir ~ "./Pathway.mp3";
+
+@Event{
+}
+
+@Initialize{
+	//SetPauseScriptPath(GetCurrentScriptDirectory() ~ "./system/Pause.dnh");
+    //SetEndSceneScriptPath(GetCurrentScriptDirectory() ~ "./system/EndScene.dnh");
+    //SetReplaySaveSceneScriptPath(GetCurrentScriptDirectory() ~ "./system/ReplaySaveScene.dnh");
+	TPlural;
+}
+
+@MainLoop{
+	yield;
+}
+
+@Finalize{
+	RemoveSound(BGMboss);
+}
+
+task TPlural {
+	let obj = ObjEnemyBossScene_Create();
+	
+	ObjEnemyBossScene_Add(obj, 0, dir ~ "./Elementalist Non-Spell 1.txt");
+	ObjEnemyBossScene_Add(obj, 1, dir ~ "./Elementalist Non-Spell 2.txt");
+	ObjEnemyBossScene_Add(obj, 1, dir ~ "./Elementalist Spellcard 1 (Elemental Curtain).txt");
+	ObjEnemyBossScene_Add(obj, 2, dir ~ "./Elementalist Non-Spell 3.txt");	
+	ObjEnemyBossScene_Add(obj, 2, dir ~ "./Elementalist Spellcard 2 (Elemental Quake).txt");
+	
+	ObjEnemyBossScene_LoadInThread(obj);
+	ObjEnemyBossScene_Regist(obj);
+	music(obj);
+	
+	while(!Obj_IsDeleted(obj)) {
+		yield;
+	} 
+	
+	CloseScript(GetOwnScriptID());
+}
+
+task music(obj) {
+	LoadSound(BGMboss);
+	let stepCount = ObjEnemyBossScene_GetInfo(obj, INFO_REMAIN_STEP_COUNT);
+	
+	PlayBGM(BGMboss, 0, 487.0);
+}
+
+function wait(n) { loop(n) { yield; } }

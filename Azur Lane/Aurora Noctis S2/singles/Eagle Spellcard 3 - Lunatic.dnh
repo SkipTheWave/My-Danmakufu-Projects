@@ -1,0 +1,250 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis S2 - Eagle Spellcard 3 - Lunatic"]
+#Text["Azur Lane - Aurora Noctis[r]Stage 2 Boss[r]\"Secret Arts - Grimoire of Eagle\""]
+#BGM["./../music/Revolt.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+#include "script/Cutin/Cutin.txt"
+
+let objBoss;
+let objScene = GetEnemyBossSceneObjectID();
+
+@Event{
+	alternative(GetEventType())
+		case(EV_REQUEST_LIFE){ SetScriptResult(5200); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(50); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(250000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	StartSpell;
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 130, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "../images/EagleChibi.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 59, 72); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(60);
+	PlaySound("Charge", 100, 0);
+	wait(60);
+
+/* 	lightMagicA;
+	wait(120);
+	lightMagicB;
+	wait(180);
+	lightMagicA;
+	wait(180);
+	lightMagicA;
+	wait(180);
+
+	darkMagicA(-1);
+	wait(70);
+	darkMagicB(-1);
+	wait(70);
+	darkMagicB(1);
+	wait(70);
+	darkMagicB(-1);
+	wait(70);
+	darkMagicB(1);
+	wait(150);
+
+	lightMagicB;
+	wait(120);
+	darkMagicB(-1);
+	wait(60);
+	darkMagicB(1);
+	wait(60);
+	darkMagicB(-1);
+	wait(180);
+
+	darkMagicA(1);
+	wait(90);
+	darkMagicA(-1);
+	wait(90);
+	loop(3)) {
+		lightMagicA;
+		wait(180);
+	} */
+
+	subMagicMain;
+	wait(120);
+	darkMagicAMain;
+	
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	
+	// this part only applies to spellcards, it's the spellcard bonus
+	if(ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SHOOTDOWN_COUNT)
+    +ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SPELL_COUNT) == 0){
+		AddScore(ObjEnemyBossScene_GetInfo(objScene, INFO_SPELL_SCORE));
+	}
+	
+	SetAutoDeleteObject(true);
+	killBoss(objBoss);
+	wait(180);
+	CloseScript(GetOwnScriptID());
+}
+
+task StartSpell {
+	let cutin = GetCurrentScriptDirectory ~ "../images/Eagle.png";
+	ObjCutin_SetSpellcardS4("Secret Arts - Grimoire of Eagle", cutin, NAZRIN, 250, 60, 10);
+	ObjCutin_LaunchS3(NAZRIN, cutin, "Lunatic");
+	ObjEnemyBossScene_StartSpell(objScene);
+}
+
+task subMagicMain {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		loop(3) {
+			lightMagicA;
+			wait(185);
+		}
+		loop(3) {
+			darkMagicB(1);
+			wait(60);
+			darkMagicB(-1);
+			wait(60);
+		}
+		wait(90);
+	}
+}
+
+task darkMagicAMain {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		darkMagicA(-1);
+		wait(430);
+		darkMagicA(1);
+		wait(410);
+	}
+}
+
+
+task darkMagicA(dir) {
+	if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) {return;}
+	let bossX = ObjMove_GetX(objBoss);
+	let bossY = ObjMove_GetY(objBoss);
+	let nshots = 5;
+	let radius = 50;
+	let angle = 90;
+	let angleS;
+	
+	PlaySound("Atk3", 40, 20);
+	ascent(i in 0..nshots) {
+		angleS = angle + i*360/nshots;
+		let obj = CreateShotA2(bossX + cos(angleS)*radius, bossY + sin(angleS)*radius, 
+			3.5, angleS, -0.1, -3.5, 327, 20);
+		darkMagicAsub(obj, dir);
+		darkMagicAmov(obj, dir);
+	}
+}
+
+task darkMagicAsub(obj, dir) {
+	let graphic = 183;
+	let angle = ObjMove_GetAngle(obj);
+	if(dir == 1) { graphic = 181; }
+	wait(20);
+	while(!Obj_IsDeleted(obj)) {
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) {return;}
+		ascent(i in 0..1) { 
+			CreateShotA1(ObjMove_GetX(obj), ObjMove_GetY(obj), 1, angle + i*360/3, graphic, 5);
+		}
+		angle -= 1*dir;
+		wait(3);
+	}
+}
+
+task darkMagicAmov(obj, dir) {
+	wait(110);
+	ObjMove_SetAcceleration(obj, +0.09);
+	ObjMove_SetMaxSpeed(obj, 0);
+	let radius = GetObjectDistance(objBoss, obj);		// isn't working
+	let wvel = -1*dir;		// degrees per frame
+	let spd = -wvel*120*(pi()/180);
+	ObjMove_AddPatternA2(obj, 130, 0, ObjMove_GetAngle(obj) + 90, +0.06, wvel, spd);
+	ObjMove_AddPatternA2(obj, 300, spd, NO_CHANGE, 0, 0, spd);
+}
+
+task lightMagicA {
+	loop(4) {
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) {return;}
+		let objY = CreateStraightLaserA1(ObjMove_GetX(GetPlayerObjectID()), 1, 90, 512, 22, 45,
+			1013, 60);
+		ObjStLaser_SetSource(objY, false);
+		wait(20);
+		let objX = CreateStraightLaserA1(1, ObjMove_GetY(GetPlayerObjectID()), 0, 512, 22, 45,
+			1013, 60);
+		ObjStLaser_SetSource(objX, false);
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0){return;}
+		PlaySound("Laser2", 70, 40);
+		PlaySound("Laser2", 70, 60);
+		wait(10);
+	}
+}
+
+task lightMagicB {		// unused
+	if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) {return;}
+	let bossX = ObjMove_GetX(objBoss);
+	let bossY = ObjMove_GetY(objBoss);
+	let angle = rand(-180, 180);
+	let radius = 130;
+	ascent(i in 0..5) {
+		angle += 360/5;
+		let obj = CreateShotA1(bossX + cos(angle)*radius, bossY + sin(angle)*radius, 2.5, angle+90, 112, 30);
+		ObjMove_SetAngularVelocity(obj, 1.4);
+		lightMagicBsub(obj);
+	}
+}
+
+task lightMagicBsub(obj) {
+	wait(40);
+	delete(obj, 240);
+	while(!Obj_IsDeleted(obj)) {
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) {return;}
+		PlaySound("Twinkle1", 40, 15);
+		ascent(i in 0..2) {
+			ascent(j in 0..5) {
+				CreateShotA1(ObjMove_GetX(obj), ObjMove_GetY(obj), 1 + j/2, ObjMove_GetAngle(obj) + i*180 - 90, 14, 15);
+			}
+		}
+		wait(75);
+	}
+}
+
+task darkMagicB(dir) {
+	if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) {return;}
+	let nwaves = 5;
+	let nshots = 18;
+	PlaySound("Atk3", 35, 30);
+	ascent(i in 0..nwaves) {
+		ascent(j in 0..nshots) {
+			let angle = i*360/nwaves*dir + j*6*dir;
+			let speed = 4 + j/6;
+			CreateShotA2(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), speed, angle, -speed/50, speed/4, 130, 30);
+		}
+	}
+}
+
+
+

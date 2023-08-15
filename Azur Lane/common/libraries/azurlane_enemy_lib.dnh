@@ -1,0 +1,93 @@
+#include "./Enemy_Comet.dnh"
+#include "./Enemy_Cygnet.dnh"
+#include "./Enemy_Leander.dnh"
+#include "./Enemy_Foxhound.dnh"
+#include "./Enemy_Bulldog.dnh"
+#include "./Enemy_Galatea.dnh"
+#include "./Enemy_Arethusa.dnh"
+#include "./Enemy_DD_G-class.dnh"
+#include "./Enemy_BB_KGV-class.dnh"
+#include "./Enemy_PawnMKIII.dnh"
+#include "./Enemy_RookMKIII.dnh"
+
+let imgHMS = GetCurrentScriptDirectory() ~ "../images/mass-produced-ships-hms.png";
+let imgBBKGV = GetCurrentScriptDirectory() ~ "../images/mass-produced-hms-bbkgv.png";
+let imgSiren = GetCurrentScriptDirectory() ~ "../images/siren-mass-produced.png";
+let imgComet = GetCurrentScriptDirectory() ~ "../images/CometChibi.png";
+let imgCygnet = GetCurrentScriptDirectory() ~ "../images/CygnetChibi.png";
+let imgLeander = GetCurrentScriptDirectory() ~ "../images/LeanderChibi.png";
+let imgFoxhound = GetCurrentScriptDirectory() ~ "../images/FoxhoundChibi.png";
+let imgBulldog = GetCurrentScriptDirectory() ~ "../images/BulldogChibi.png";
+let imgGalatea = GetCurrentScriptDirectory() ~ "../images/GalateaChibi.png";
+let imgArethusa = GetCurrentScriptDirectory() ~ "../images/ArethusaChibi.png";
+
+function LoadEnemies() {
+  LoadTexture(imgExplosion);
+  LoadTexture(imgHMS);
+  LoadTexture(imgBBKGV);
+  LoadTexture(imgSiren);
+  LoadTexture(imgComet);
+  LoadTexture(imgCygnet);
+  LoadTexture(imgLeander);
+  LoadTexture(imgFoxhound);
+  LoadTexture(imgBulldog);
+  LoadTexture(imgGalatea);
+  LoadTexture(imgArethusa);
+}
+
+function UnloadEnemies() {
+  RemoveTexture(imgExplosion);
+  RemoveTexture(imgHMS);
+  RemoveTexture(imgBBKGV);
+  RemoveTexture(imgSiren);
+  RemoveTexture(imgComet);
+  RemoveTexture(imgCygnet);
+  RemoveTexture(imgLeander);
+  RemoveTexture(imgFoxhound);
+  RemoveTexture(imgBulldog);
+  RemoveTexture(imgGalatea);
+  RemoveTexture(imgArethusa);
+}
+
+// Aux enemy spawning tasks (dir '0' if going right, '1' if going left)
+task EnemyWaveDDGA(num, dir, difficulty) {
+    let offset;
+    loop(num) {
+        if(dir == 0) { offset = rand(0,20); }
+        if(dir == 1) { offset = rand(-20,0); }
+        let x = -hitboxDDG + dir*(GetStgFrameWidth() + 2*hitboxDDG);
+        CreateEnemyDDGA(x, rand(50, 80), 2, dir*180 + offset, difficulty);
+        wait(30);
+    }
+}
+
+task EnemyWaveDDGB(num, y, dir, difficulty) {
+    loop(num) {
+        let x = -hitboxDDG + dir*(GetStgFrameWidth() + 2*hitboxDDG);
+        CreateEnemyDDGB(x, y, 3, dir*180, difficulty);
+        wait(25);
+    }
+}
+
+task EnemyWaveDDGC(num, y, dir, difficulty) {
+    loop(num) {
+        let x = -hitboxDDG + dir*(GetStgFrameWidth() + 2*hitboxDDG);
+        CreateEnemyDDGC(x, y, 2, dir*180, 60, 5-dir*10, difficulty);
+        wait(30);
+    }
+}
+
+task EnemyWaveDDGC2(num, dir, travelTime, difficulty) {
+    loop(num) {
+        let x = -hitboxDDG + dir*(GetStgFrameWidth() + 2*hitboxDDG);
+        CreateEnemyDDGC2(x, dir, travelTime, difficulty);
+        wait(20);
+    }
+}
+
+task EnemyWaveCometB(num, delay, x, spd, dir, difficulty) {
+    loop(num) {
+        CreateEnemyCometB(x, -hitboxComet, spd, dir, 90, difficulty);
+        wait(delay);
+    }
+}

@@ -1,0 +1,105 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["Chivalry - Malice Breaker"]
+#Text["Saber Spellcard 1"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#BGM["./let the stars fall down.mp3"]
+
+#include"script/default_system/Default_ShotConst.txt"
+#include"Cutin/Cutin/Cutin.txt"
+
+let objBoss;
+let objScene=GetEnemyBossSceneObjectID();
+let cutin = GetCurrentScriptDirectory ~ "SaberCutin.png";
+
+@Event{
+		alternative(GetEventType())
+	case(EV_REQUEST_LIFE){
+		SetScriptResult(3500);
+        }
+	case(EV_REQUEST_TIMER){
+		SetScriptResult(45);
+	}
+	case(EV_REQUEST_SPELL_SCORE){
+		SetScriptResult(800000);
+	}
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	
+	let imgBoss = GetCurrentScriptDirectory ~ "Saber.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 40, 57);
+	ObjSprite2D_SetDestCenter(objBoss);
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX, 120, 60);
+	ObjEnemyBossScene_StartSpell(objScene);
+	
+	TFinalize;
+	StartSpell;
+	MainTask;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss,INFO_LIFE)>0){yield;}
+	if(ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SHOOTDOWN_COUNT)
+	      +ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SPELL_COUNT) == 0){
+	  AddScore(ObjEnemyBossScene_GetInfo(objScene,INFO_SPELL_SCORE));
+	}
+	Obj_Delete(objBoss);
+	DeleteShotAll(TYPE_ALL,TYPE_IMMEDIATE);
+	SetAutoDeleteObject(true);
+	CloseScript(GetOwnScriptID());
+	return;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss,ObjMove_GetX(objBoss),ObjMove_GetY(objBoss),40);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss,ObjMove_GetX(objBoss),ObjMove_GetY(objBoss),40);
+	
+	yield;
+}
+
+function GetCenterX{
+     return GetStgFrameWidth/2;
+ }
+ function GetCenterY{
+     return GetStgFrameHeight/2;
+ }
+ function wait(n){loop(n){yield;}}
+ 
+  task StartSpell {
+	ObjCutin_SetSpellcardS4("Chivalry - Malice Breaker", cutin, BYAKUREN, 180, 220, 255);
+	ObjCutin_LaunchS3(BYAKUREN, cutin, "Normal");
+ }
+ 
+ task MainTask {
+	wait(120);
+	while(ObjEnemy_GetInfo(objBoss,INFO_LIFE)>0){
+		movement;
+		let angleP = GetAngleToPlayer(objBoss);
+		loop(3) {
+			let angleT = rand(0,360);
+			let angleP = GetAngleToPlayer(objBoss);
+			loop(14){
+				CreateLooseLaserA1(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 3, angleT, 90, 20, 155, 15);
+				angleT += 360/14;
+			}
+			CreateStraightLaserA1(ObjMove_GetX(objBoss)+rand(-20,20), ObjMove_GetY(objBoss)+rand(-40,0), angleP+rand(-5,5), 512, 34, 120, 153, 60);
+			wait(60);
+		}
+		angleP = GetAngleToPlayer(objBoss);
+		CreateStraightLaserA1(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), angleP, 590, 180, 120, 120, 120);
+		wait(240);
+	}
+ }
+ 
+ task movement {
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX+rand(-50,50), GetCenterY+rand(-100,0), 60);
+	wait(60);
+ }
+ 
+

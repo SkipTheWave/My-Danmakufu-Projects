@@ -1,0 +1,131 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis S4 - Belfast Spellcard"]
+#Text["Azur Lane - Aurora Noctis[r]Stage 4 Miniboss[r]\"Royal Maid - Burn Order\""]
+#BGM["./../music/Ex Nihilo.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#System["./../../system/Default_System.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+#include "script/Cutin/Cutin.txt"
+
+let objBoss;
+let objScene = GetEnemyBossSceneObjectID();
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(5200); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(33); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(300000); }
+}
+
+@Initialize{
+	SetPauseScriptPath(GetCurrentScriptDirectory() ~ "./../../system/Pause.dnh");
+    SetEndSceneScriptPath(GetCurrentScriptDirectory() ~ "./../../system/EndScene.dnh");
+    SetReplaySaveSceneScriptPath(GetCurrentScriptDirectory() ~ "./../system/../ReplaySaveScene.dnh");
+
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	StartSpell;
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 100, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "../images/BelfastChibi.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 66, 69); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(60);
+	contShot;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	
+	// this part only applies to spellcards, it's the spellcard bonus
+	if(ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SHOOTDOWN_COUNT)
+    +ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SPELL_COUNT) == 0){
+		AddScore(ObjEnemyBossScene_GetInfo(objScene, INFO_SPELL_SCORE));
+	}
+	
+	SetAutoDeleteObject(true);
+	killBoss(objBoss);
+	wait(180);
+	CloseScript(GetOwnScriptID());
+}
+
+task StartSpell {
+	let cutin = GetCurrentScriptDirectory ~ "../images/Belfast.png";
+	ObjCutin_SetSpellcardS4("Royal Maid - Burn Order", cutin, NAZRIN, 100, 100, 220);
+	ObjCutin_LaunchS3(NAZRIN, cutin, "Normal");
+	ObjEnemyBossScene_StartSpell(objScene);
+}
+
+
+
+
+task contShot {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		let ex = ObjMove_GetX(objBoss);
+		let ey = ObjMove_GetY(objBoss);
+		let angleT = 0;
+		ascent(i in 0..25) {
+			if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+			PlaySound("Atk3", 40, 10);
+			let spd = 4 + i*0.15;
+			let sx1 = ex + cos(angleT)*(40 + i*5);
+			let sx2 = ex + cos(angleT + 180)*(40 + i*5);
+			let sy1 = ey + sin(angleT)*(40 + i*4);
+			let sy2 = ey + sin(angleT + 180)*(40 + i*4);
+			let angleP = atan2(GetPlayerY() - sy2, GetPlayerX() - sx2);
+			ascent(j in 0..10) {
+				CreateShotA2(sx1, sy1, spd, angleT + j*360/10, -0.15, spd/3, 838, 10);
+				CreateShotA2(sx2, sy2, spd, angleP + j*360/10, -0.15, spd/3, 832, 10);	
+			}
+			angleT += 360/30;
+			wait(30 - i);
+		}
+		wait(45);
+		ascent(i in 0..8) {
+			shotB(i*360/8);
+		}
+		wait(180);
+	}
+}
+
+task shotB(angle) {
+	let sx = ObjMove_GetX(objBoss) + 40*cos(angle);
+	let sy = ObjMove_GetY(objBoss) + 40*sin(angle);
+	loop(8) {
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+		sx += 20*cos(angle);
+		sy += 20*sin(angle);
+		let angleP = atan2(GetPlayerY() - sy, GetPlayerX() - sx);
+		PlaySound("Atk3", 40, 10);
+		ascent(j in 0..4) {
+			CreateShotA2(sx, sy, 6, angle + j*360/4, -0.15, 2, 838, 10);
+			CreateShotA2(sx, sy, 6, angleP + j*360/4, -0.15, 2, 832, 10);
+		}
+		wait(18);
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+	}
+}
+
+
+
+

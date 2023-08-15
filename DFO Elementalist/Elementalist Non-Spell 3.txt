@@ -1,0 +1,90 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["Elementalist Non-Spell 3"]
+#Text[""]
+#BGM["./Pathway.mp3"]
+#include "script/default_system/Default_ShotConst.txt"
+
+let objBoss;
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(4000); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(30); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(25000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 120, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "elementalist(overmind)-sprite.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 75, 114); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(60);
+	shots;
+	
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	Obj_Delete(objBoss);
+	DeleteShotAll(TYPE_ALL, TYPE_IMMEDIATE);
+	SetAutoDeleteObject(true);
+	CloseScript(GetOwnScriptID());
+}
+
+function GetCenterX(){ return GetStgFrameWidth() / 2; }		// 384 / 2
+function GetCenterY(){ return GetStgFrameHeight() / 2; }	// 448 / 2
+function wait(n){ loop(n){yield;} }
+
+task shots {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		spiral(1);
+		wait(240);
+		spiral(-1);
+		wait(240);
+	}
+}
+
+task spiral(direction) {
+	let bossX = ObjMove_GetX(objBoss);
+	let bossY = ObjMove_GetY(objBoss);
+	let angleT = 0;
+	let radius = 80;
+	let graphic = 233;
+		
+	loop(70) {
+		ascent(i in 0..6) {
+			let angle = angleT + i*360/6;
+			CreateShotA1(bossX + radius*cos(angle), bossY + radius*sin(angle), 1.5,
+				angle, graphic, 15);
+		}
+		angleT += 8*direction;
+		radius -= 1.5;
+		if(graphic == 240) {
+			graphic = 233; }
+		else { graphic++; }
+		wait(2);
+	}
+}
+

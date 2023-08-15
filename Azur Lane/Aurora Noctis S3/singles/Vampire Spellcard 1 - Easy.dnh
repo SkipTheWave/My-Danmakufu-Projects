@@ -1,0 +1,131 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis S3 - Vampire Spellcard - Easy"]
+#Text["Azur Lane - Aurora Noctis[r]Stage 3 Miniboss[r]\"Taboo - Vampire Kiss\""]
+#BGM["./music/Illusionary White Traveller.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+#include "script/Cutin/Cutin.txt"
+
+let objBoss;
+let objScene = GetEnemyBossSceneObjectID();
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(3800); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(30); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(250000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	StartSpell;
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 100, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "../images/VampireChibi.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 69, 73); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(60);
+	contShot;
+	kiss;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	
+	// this part only applies to spellcards, it's the spellcard bonus
+	if(ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SHOOTDOWN_COUNT)
+    +ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SPELL_COUNT) == 0){
+		AddScore(ObjEnemyBossScene_GetInfo(objScene, INFO_SPELL_SCORE));
+	}
+	
+	SetAutoDeleteObject(true);
+	killBoss(objBoss);
+	wait(180);
+	CloseScript(GetOwnScriptID());
+}
+
+task StartSpell {
+	let cutin = GetCurrentScriptDirectory ~ "../images/Vampire.png";
+	ObjCutin_SetSpellcardS4("Taboo - Vampire Kiss", cutin, NAZRIN, 250, 0, 120);
+	ObjCutin_LaunchS3(NAZRIN, cutin, "Easy");
+	ObjEnemyBossScene_StartSpell(objScene);
+}
+
+
+
+
+task contShot {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		let bossX = ObjMove_GetX(objBoss);
+		let bossY = ObjMove_GetY(objBoss);
+	
+		PlaySound("Atk1", 60, 0);
+		let angleT = rand(0, 359);
+		let angSpd = [-0.5, 0.5][rand_int(0, 1)];
+		ascent(i in 0..3) {
+			let obj = CreateShotA2(bossX, bossY, 0, angleT + i*120, 0.01, 3, 237, 10);
+			ObjMove_SetAngularVelocity(obj, angSpd);
+			contShotB(obj);
+		}
+		wait(120);
+	}
+}
+
+task contShotB(obj) {
+	while(!Obj_IsDeleted(obj)) {
+		let objB = CreateShotA1(ObjMove_GetX(obj), ObjMove_GetY(obj), 0.05, rand(0, 359), 702, 10);
+		delete(objB, 35);
+		wait(5);
+	}
+}
+
+task kiss {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		let playerX = ObjMove_GetX(GetPlayerObjectID());
+		let playerY = ObjMove_GetY(GetPlayerObjectID());
+		ObjMove_SetDestAtSpeed(objBoss, playerX, playerY, 1);
+		
+		wait(360);
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+		
+		let bossX = ObjMove_GetX(objBoss);
+		let bossY = ObjMove_GetY(objBoss);
+		let angleT = rand(0, 359);
+		let angSpd = [-0.5, 0.5][rand_int(0, 1)];
+		
+		PlaySound("Atk3", 60, 30);	
+		ascent(j in 0..2) {
+			ascent(i in 0..3) {
+				let obj = CreateShotA2(bossX, bossY, 0, angleT + i*90, 0.01, 3, 237, 30);
+				
+				if(j == 0) { ObjMove_SetAngularVelocity(obj, angSpd); }
+				else { ObjMove_SetAngularVelocity(obj, -angSpd); }
+				contShotB(obj);
+			}
+		}
+	}
+}
+
+
+

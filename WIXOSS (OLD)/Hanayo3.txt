@@ -1,0 +1,161 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["Hanayo Non-Spell 3"]
+#Text["Hanayo Non-Spell 3"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+
+#include"script/default_system/Default_ShotConst.txt"
+
+let objBoss;
+let objShot;
+let shotSE = "SFX/SFX/ATTACK4.wav";
+let explodeSE = "SFX/SFX/ATTACK3.wav";
+let spiralSE = "SFX/SFX/TWINKLE.wav";
+
+@Event{
+		alternative(GetEventType())
+	case(EV_REQUEST_LIFE){
+		SetScriptResult(5000);
+        }
+	case(EV_REQUEST_TIMER){
+		SetScriptResult(45);
+	}
+	case(EV_REQUEST_SPELL_SCORE){
+		SetScriptResult(600000);
+	}
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	
+	TDrawLoop;
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX, 120, 60);
+	
+	LoadSound(shotSE);
+	LoadSound(explodeSE);
+	LoadSound(spiralSE);
+	
+	TFinalize;
+	MainTask;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss,INFO_LIFE)>0){yield;}
+	Obj_Delete(objBoss);
+	DeleteShotAll(TYPE_ALL,TYPE_IMMEDIATE);
+	SetAutoDeleteObject(true);
+	CloseScript(GetOwnScriptID());
+	return;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss,ObjMove_GetX(objBoss),ObjMove_GetY(objBoss),40);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss,ObjMove_GetX(objBoss),ObjMove_GetY(objBoss),40);
+	
+	yield;
+}
+
+function GetCenterX{
+     return GetStgFrameWidth/2;
+ }
+function GetCenterY{
+     return GetStgFrameHeight/2;
+ }
+function wait(n){loop(n){yield;}}
+ 
+ task TDrawLoop {
+	let imgExRumia = GetCurrentScriptDirectory ~ "Hanayo.png";
+	ObjPrim_SetTexture(objBoss, imgExRumia);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 70, 118);
+	ObjSprite2D_SetDestCenter(objBoss);
+ }
+ 
+ task MainTask {
+	 
+	wait(180);
+	
+	while(ObjEnemy_GetInfo(objBoss,INFO_LIFE)>0){
+		movement;
+		let angleR = rand(0,360);
+		let angleP = GetAngleToPlayer(objBoss);
+		ascent (i in 0..18){
+			ShotA(angleP+40+i*360/54);
+		}
+		wait(60);
+		ascent (i in 0..18){
+			ShotA(angleP-40-i*360/54);
+		}
+		wait(60);
+		Assassination;
+		wait(120);
+	}
+ }
+ 
+ task ShotA(angle) {
+	 
+	let objTimer = 0;
+	let obj = CreateShotA2(ObjMove_GetX(objBoss),ObjMove_GetY(objBoss),5,angle,-0.1,0.1,81,15);
+	
+	while (!Obj_IsDeleted(obj)) {
+		let angleP = GetAngleToPlayer(objBoss);
+		objTimer++;
+		
+		if (objTimer == 90) {
+			ascent (i in 0..5){
+				angleP = GetAngleToPlayer(obj);
+				let obj2 = CreateShotA2(ObjMove_GetX(obj),ObjMove_GetY(obj),6-i/2,angleP,-0.02-i/100,3-i/4,83,0);
+			}
+			Obj_Delete(obj);
+		}
+		yield;
+	}
+}
+
+task Assassination {
+	
+	let angleP = GetAngleToPlayer(objBoss);
+	let objTimer = 0;
+	let obj = CreateStraightLaserA1(rand(5,GetCenterX), 0, 90, 600, 28, 90, 154, 120);
+	let obj2 = CreateStraightLaserA1(rand(GetCenterX,GetStgFrameWidth-5), 0, 90, 600, 28, 90, 154, 120);
+	wait(180);
+	ascent (i in 0..12) {
+		angleP = GetAngleToPlayer(obj);
+		CreateShotA2(ObjMove_GetX(obj),ObjMove_GetY(obj)+i*GetStgFrameHeight/12,0,rand(10,80),0.002,2,106,30);
+		CreateShotA2(ObjMove_GetX(obj2),ObjMove_GetY(obj)+i*GetStgFrameHeight/12,0,rand(10,80),0.002,2,106,30);
+		CreateShotA2(ObjMove_GetX(obj),ObjMove_GetY(obj)+i*GetStgFrameHeight/12,0,rand(100,170),0.002,2,106,30);
+		CreateShotA2(ObjMove_GetX(obj2),ObjMove_GetY(obj)+i*GetStgFrameHeight/12,0,rand(100,170),0.002,2,106,30);
+	}
+	
+}
+ 
+task movement {
+    wait(120);
+	ObjMove_SetDestAtFrame(objBoss, rand(GetCenterX+150,GetCenterX-150), rand(GetCenterY-80,GetCenterY-200), 60);
+}
+
+task BulletReflection(obj2,angleP) {
+	while(ObjMove_GetX(obj2)>0 && ObjMove_GetX(obj2)<GetStgFrameWidth && ObjMove_GetY(obj2)<GetStgFrameHeight) { yield; }
+	
+	if (ObjMove_GetX(obj2)<=0) {
+		ObjMove_SetX(obj2, 0);
+		ObjMove_SetAngle(obj2, 180-angleP);
+		wait(180);
+		Obj_Delete(obj2);
+	} else
+	if (ObjMove_GetX(obj2)>=GetStgFrameWidth) {
+		ObjMove_SetX(obj2, GetStgFrameWidth);
+		ObjMove_SetAngle(obj2, 180-angleP);
+		wait(180);
+		Obj_Delete(obj2);
+	} else
+	if (ObjMove_GetY(obj2)>=GetStgFrameHeight) {
+		ObjMove_SetY(obj2, GetStgFrameHeight);
+		ObjMove_SetAngle(obj2, -1*angleP);
+		wait(180);
+		Obj_Delete(obj2);
+	}
+}
+

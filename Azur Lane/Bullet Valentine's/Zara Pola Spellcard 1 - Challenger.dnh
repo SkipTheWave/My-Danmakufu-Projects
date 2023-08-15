@@ -1,0 +1,204 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["Bullet Valentine's - Challenger - Zara & Pola 2"]
+#Text["Terni Shields & Viola Spear"]
+#BGM["./Music/Sardegna Empire.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+#include "script/Cutin/Cutin.txt"
+
+let Zara;
+let Pola;
+let startY_Zara = GetCenterY() - 20;
+let startY_Pola = GetCenterY() - 160;
+let startX = GetCenterX();
+let objScene = GetEnemyBossSceneObjectID();
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(9000); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(55); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(400000); }
+}
+
+@Initialize{
+	SetPauseScriptPath(GetCurrentScriptDirectory() ~ "./system/Pause.dnh");
+    SetEndSceneScriptPath(GetCurrentScriptDirectory() ~ "./system/EndScene.dnh");
+    SetReplaySaveSceneScriptPath(GetCurrentScriptDirectory() ~ "./system/ReplaySaveScene.dnh");
+	
+	Zara = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	Pola = ObjEnemy_Create(OBJ_ENEMY);
+	ObjEnemy_Regist(Zara);
+	ObjEnemy_Regist(Pola);
+	StartSpell;
+	
+	ObjMove_SetDestAtFrame(Zara, startX, startY_Zara, 60);
+	ObjMove_SetDestAtFrame(Pola, startX, startY_Pola, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(Zara, ObjMove_GetX(Zara), ObjMove_GetY(Zara), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(Zara, ObjMove_GetX(Zara), ObjMove_GetY(Zara), 24);
+	
+	ObjEnemy_SetIntersectionCircleToShot(Zara, ObjMove_GetX(Pola), ObjMove_GetY(Pola), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(Zara, ObjMove_GetX(Pola), ObjMove_GetY(Pola), 24);
+	yield;
+}
+
+task TDrawLoop {
+	let imgZara = GetCurrentScriptDirectory() ~ "Images/ZaraChibi.png";
+	let imgPola = GetCurrentScriptDirectory() ~ "Images/PolaChibi.png";
+	ObjPrim_SetTexture(Zara, imgZara);
+	ObjPrim_SetTexture(Pola, imgPola);
+	ObjSprite2D_SetSourceRect(Zara, 1, 1, 63, 75); 	
+	ObjSprite2D_SetSourceRect(Pola, 1, 1, 74, 74); 		
+	ObjSprite2D_SetDestCenter(Zara);
+	ObjSprite2D_SetDestCenter(Pola);
+}
+
+task MainTask {
+	wait(90);
+	main;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(Zara, INFO_LIFE) > 0) { yield; }
+	
+	// this part only applies to spellcards, it's the spellcard bonus
+	if(ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SHOOTDOWN_COUNT)
+    +ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SPELL_COUNT) == 0){
+		AddScore(ObjEnemyBossScene_GetInfo(objScene, INFO_SPELL_SCORE));
+	}
+	
+	Obj_Delete(Zara);
+	Obj_Delete(Pola);
+	DeleteShotAll(TYPE_ALL, TYPE_IMMEDIATE);
+	SetAutoDeleteObject(true);
+	
+	PlaySound("Defeat", 50, 0);
+	wait(120);
+	CloseScript(GetOwnScriptID());
+}
+
+task StartSpell {
+	let cutin = GetCurrentScriptDirectory~"Images/ZaraPola4.png";
+	ObjCutin_SetSpellcardS4("Terni Shields & Viola Spear", cutin, NAZRIN, 100, 190, 110);
+	ObjCutin_LaunchS3(NAZRIN, cutin, "Challenger");
+	ObjEnemyBossScene_StartSpell(objScene);
+}
+
+
+
+task main {
+	shootZaraA;
+	shootZaraB;
+	shootPolaA;
+	shootPolaB;
+	while(!Obj_IsDeleted(Zara)) {
+		moveZara();
+		movePola();
+		wait(200);
+	}
+}
+
+task moveZara() {
+	let newX = rand(startX - 120, startX + 120);
+	ObjMove_SetDestAtWeight(Zara, newX, startY_Zara, 45, 5);
+}
+
+task movePola() {
+	let newX = rand(startX - 120, startX + 120);
+	ObjMove_SetDestAtWeight(Pola, newX, startY_Pola, 45, 5);
+}
+
+
+task shootZaraA {
+	let angleT = 0;
+	let numRows = 4;
+	let numRowShots = 2;
+	wait(60);
+	
+	while(!Obj_IsDeleted(Zara)) {
+		ascent(i in 0..numRows) {
+			if(Obj_IsDeleted(Zara)) { return; }
+			PlaySound("Atk3", 20, 0);
+			ascent(j in 0..numRowShots) {
+				CreateShotA1(ObjMove_GetX(Zara), ObjMove_GetY(Zara), 1.5 + j, 
+				angleT + i*360/numRows, 3, 0);
+			}
+		}
+		angleT -= 22;
+		wait(25);
+	}
+}
+
+task shootZaraB {
+	let angleT = 0;
+	let angleDev = 8;
+	let numRowShots = 2;
+	wait(60);
+	
+	while(!Obj_IsDeleted(Zara)) {
+		ascent(i in -2..3) {
+			if(Obj_IsDeleted(Zara)) { return; }
+			ascent(j in 0..numRowShots) {
+				CreateShotA2(ObjMove_GetX(Zara), ObjMove_GetY(Zara), 8 + j, 
+					GetAngleToPlayer(Zara) + i*angleDev, -0.3 - j*0.03, 0.8 + j*0.1,
+					10, 15);
+			}
+		}
+		angleT -= 25;
+		wait(200);
+	}
+}
+
+task shootPolaA {
+	wait(60);
+	while(!Obj_IsDeleted(Pola)) {
+		PlaySound("Atk4", 60, 15);
+		violaSpear(ObjMove_GetX(Pola) - 20);
+		violaSpear(ObjMove_GetX(Pola) + 20);
+		wait(200);
+	}
+}
+
+task violaSpear(x) {
+	let obj = CreateShotA2(x, ObjMove_GetY(Pola), 0, 90, +0.15, 8, 237, 15);
+	while(!Obj_IsDeleted(obj)) {
+		let spawnX = ObjMove_GetX(obj) + rand(-2, 2);
+		let spawnY = ObjMove_GetY(obj) + rand(-2, 2);
+		let obj2 = CreateShotA1(spawnX, spawnY, 0.1, rand(0, 359), 704, 10);
+		delete(obj2, 90);
+		wait(2);
+	}
+}
+
+task shootPolaB {
+	wait(60);
+	while(!Obj_IsDeleted(Pola)) {
+		violaKnives(0, 1);
+		violaKnives(180, -1);
+		wait(200);
+	}
+}
+
+task violaKnives(angle, dir) {
+	let angleTotal = 0;
+	let angleDev = 20;
+	while(angleTotal < 180) {
+		ascent(i in 0..4) {
+			CreateShotA2(ObjMove_GetX(Pola), ObjMove_GetY(Pola), 5 + i, angle,
+				-0.2 - i*0.04, 3 + i*0.6, 302, 0);
+		}
+		angle += angleDev*dir;
+		angleTotal += angleDev;
+		wait(10);
+	}
+}
+
+
+

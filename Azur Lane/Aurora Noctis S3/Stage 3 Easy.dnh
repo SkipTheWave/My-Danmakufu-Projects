@@ -1,0 +1,327 @@
+#TouhouDanmakufu[Stage]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis Stage 3 - Easy"]
+#Text["The second day of the trip. The air gets colder by the minute. If you can handle it now, perhaps the rest may be tolerable."]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#System["./../system/Default_System.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+#include "script/Skip Scripts/Azur Lane/common/libraries/azurlane_enemy_lib.dnh"
+
+let dir = GetCurrentScriptDirectory();
+let BGMstage = dir ~ "./music/Illusionary White Traveller.ogg";
+let BGMboss = dir ~ "./music/Takt of Heroes.ogg";
+let stagepart = 0; 
+let counter = 0;
+let bgm;
+let bgm2;
+let diff = 0;
+
+@Event {
+    alternative(GetEventType())
+    case(EV_PAUSE_ENTER){
+        if(stagepart == 0){
+            ObjSound_Stop(bgm);
+        } 
+        if(stagepart == 1){
+            ObjSound_Stop(bgm2);
+        } 
+    }
+    case(EV_PAUSE_LEAVE){
+        if(stagepart == 0){
+            ObjSound_Play(bgm);
+        } 
+        if(stagepart == 1){
+            ObjSound_Play(bgm2);
+        } 
+    }
+    case(EV_USER_STAGE+1){                  //Generic boss minor item drop
+        let arg = GetEventArgument(0); //x, y
+        loop(8) {
+            CreateItemA1(ITEM_POINT, arg[0] + rand(-30, 30), arg[1] + rand(-30, 30), 5000);
+        }
+    }
+    case(EV_USER_STAGE+2){                  //Generic boss major item drop
+        let arg = GetEventArgument(0); //x, y
+        loop(16) {
+            CreateItemA1(ITEM_POINT, arg[0] + rand(-30, 30), arg[1] + rand(-30, 30), 5000);
+        }
+    }
+}
+
+@Initialize {
+    SetPauseScriptPath(GetCurrentScriptDirectory() ~ "../system/Pause.dnh");
+    SetEndSceneScriptPath(GetCurrentScriptDirectory() ~ "../system/EndScene.dnh");
+    SetReplaySaveSceneScriptPath(GetCurrentScriptDirectory() ~ "../system/ReplaySaveScene.dnh");
+    RenderBG;
+	
+	TStage;
+}
+
+@MainLoop {
+    counter++;
+	yield;
+}
+
+@Finalize {
+	RemoveSound(BGMstage);
+	RemoveSound(BGMboss);
+}
+
+task TStage
+{
+    let pathMB1 = dir ~ "./plurals/S3MB1 E.dnh";
+    let pathMB2 = dir ~ "./plurals/S3MB2 E.dnh";
+    let pathB = dir ~ "./plurals/S3B E.dnh"; 
+
+    LoadEnemies();
+	bgm2 = ObjSound_Create();
+    ObjSound_Load(bgm2, BGMboss);
+    StageBGM(bgm2, 2);
+    bgm = ObjSound_Create();
+    ObjSound_Load(bgm, BGMstage);
+    StageBGM(bgm, 1);
+    ObjSound_Play(bgm);
+    counter = 0;
+
+    StagePart1;
+    while(counter < 22*60) {yield;}
+
+    StagePart2;
+    while(counter < 29.5*60) { yield; }
+
+    ClearEnemiesBullets();
+    let mb1Script = LoadScriptInThread(pathMB1);
+    StartScript(mb1Script);
+    while(GetCommonData("bossActive", 0) == 1 && GetPlayerState() != STATE_END)
+    {
+        yield;
+    }
+    StagePostMidboss1;
+    while(counter < 52*60) { yield; }
+
+    StagePart3;
+    while(counter < 78.5*60) {yield;}
+
+    ClearEnemiesBullets();
+	let mb2Script = LoadScriptInThread(pathMB2);
+	StartScript(mb2Script);
+    while(GetCommonData("bossActive", 0) == 1 && GetPlayerState() != STATE_END)
+    {
+        yield;
+    }
+    StagePostMidboss2;
+    while(counter < 130*60) { yield; }
+
+    StagePart4; 
+    while(counter < 160*60) { yield; }
+
+    StagePart5;
+
+    while(counter < 199*60) { yield; }      // if you change this, don't forget to change BG frames
+	// Boss handling starts here
+	stagepart = 1;
+    ObjSound_Stop(bgm);
+	ObjSound_Play(bgm2);
+
+	let bScript = LoadScriptInThread(pathB);
+	StartScript(bScript);
+    while(!IsCloseScript(bScript) && GetPlayerState() != STATE_END)
+    {
+        yield;
+    }
+
+    UnloadEnemies();
+    wait(240);
+    CloseStgScene();
+}
+
+function StageBGM(obj, ID){
+    ObjSound_SetSoundDivision(obj, SOUND_BGM);
+    ObjSound_SetRestartEnable(obj, true);
+    ObjSound_SetLoopEnable(obj, true);
+    ObjSound_SetLoopTime(obj, 0, 300);
+    if(ID == 1){}
+    if(ID == 2){ObjSound_SetLoopTime(obj, 19.5, 165.5);}
+    return obj;
+}
+
+task RenderBG {
+    let currRed = 150;
+    let currGreen = 150;
+    let currBlue = 180;
+    let frontAlpha = 10;
+    let backAlpha = 230;
+    let obj = ObjPrim_Create(OBJ_PRIMITIVE_2D);
+    ObjPrim_SetPrimitiveType(obj, PRIMITIVE_TRIANGLESTRIP);
+    ObjPrim_SetVertexCount(obj, 4);
+    ObjPrim_SetVertexPosition(obj, 0, 0, 0, 0);
+    ObjPrim_SetVertexPosition(obj, 1, 0, 448, 0);
+    ObjPrim_SetVertexPosition(obj, 2, 384, 0, 0);
+    ObjPrim_SetVertexPosition(obj, 3, 384, 448, 0);
+    
+    ObjRender_SetAlpha(obj, backAlpha);
+    ObjRender_SetColor(obj, currRed, currGreen, currBlue);
+    Obj_SetRenderPriorityI(obj, 21);
+    ObjRender_SetBlendType(obj, BLEND_ADD_ARGB);  
+
+    let obj2 = ObjPrim_Create(OBJ_PRIMITIVE_2D);
+    ObjPrim_SetPrimitiveType(obj2, PRIMITIVE_TRIANGLESTRIP);
+    ObjPrim_SetVertexCount(obj2, 4);
+    ObjPrim_SetVertexPosition(obj2, 0, 0, 0, 0);
+    ObjPrim_SetVertexPosition(obj2, 1, 0, 448, 0);
+    ObjPrim_SetVertexPosition(obj2, 2, 384, 0, 0);
+    ObjPrim_SetVertexPosition(obj2, 3, 384, 448, 0);
+    
+    ObjRender_SetAlpha(obj2, 0);
+    ObjRender_SetColor(obj2, currRed, currGreen, currBlue);
+    Obj_SetRenderPriorityI(obj2, 62);
+    ObjRender_SetBlendType(obj2, BLEND_ADD_ARGB);
+
+    // BG color transition  
+    let finalRed = 120;
+    let finalGreen = 20;
+    let finalBlue = 0;
+    let finalBackAlpha = 255;
+    let diffRed = finalRed - currRed;
+    let diffGreen = finalGreen - currGreen;
+    let diffBlue = finalBlue - currBlue;
+    let diffBackAlpha = finalBackAlpha - backAlpha;
+    let diffFrontAlpha = frontAlpha;
+    let startFrames = 60*60;
+    while(counter < startFrames){yield;}
+    let bossFrames = 180*60;
+    while(counter < bossFrames) {
+        currRed += diffRed/bossFrames;
+        currGreen += diffGreen/bossFrames;
+        currBlue += diffBlue/bossFrames;
+        backAlpha += diffBackAlpha/bossFrames;
+        frontAlpha += diffFrontAlpha/bossFrames;
+        ObjRender_SetColor(obj, currRed, currGreen, currBlue);
+        ObjRender_SetAlpha(obj, backAlpha);
+        ObjRender_SetColor(obj2, currRed, currGreen, currBlue);
+        ObjRender_SetAlpha(obj2, frontAlpha);
+        yield;
+    }
+}
+
+task StagePart1 {       // gotta last 22*60 (~1300) frames
+    let x = -hitboxDDG;
+    let y = -hitboxDDG;
+    let x2 = -hitboxGalatea;
+    let x3 = GetStgFrameWidth() + hitboxGalatea;
+    loop(3) {
+        wait(100);
+        CreateEnemyDDGA2(40, y, 1, 40, diff);
+        CreateEnemyDDGA2(80, y, 1.5, 40, diff);
+        CreateEnemyDDGA2(120, y, 2, 40, diff);
+    }
+    loop(3) {
+        wait(100);
+        CreateEnemyDDGA2(GetStgFrameWidth() - 40, y, 1, 150, diff);
+        CreateEnemyDDGA2(GetStgFrameWidth() - 80, y, 1.5, 150, diff);
+        CreateEnemyDDGA2(GetStgFrameWidth() - 120, y, 2, 150, diff);
+    }
+    wait(100);
+    CreateEnemyGalateaA(x3, 120, 0.9, 180, diff);
+    wait(200);
+    CreateEnemyGalateaA(x2, 120, 0.9, 0, diff);
+    wait(100);
+    CreateEnemyGalateaA(x3, 120, 0.9, 180, diff);
+}
+
+task StagePart2 {       // gotta last 7*60 (420) frames
+    let y = -hitboxArethusa;
+    let x2 = -hitboxGalatea;
+    let x3 = GetStgFrameWidth() + hitboxGalatea;
+    CreateEnemyArethusaA(GetCenterX() + 120, y, 5, 90, diff);
+    wait(100);
+    CreateEnemyArethusaA(GetCenterX() - 120, y, 5, 90, diff);
+    wait(100);
+    CreateEnemyArethusaA(GetCenterX(), y, 5, 90, diff);
+}
+
+task StagePostMidboss1 {
+    while(counter < 50*60) {
+        CreateEnemyDDGA2(GetStgFrameWidth() + hitboxDDG, 40, 1.8 + rand(0, 0.6), 180, diff);
+        CreateEnemyDDGA2(GetStgFrameWidth() + hitboxDDG, 90, 1.2 + rand(0, 0.6), 180, diff);
+        wait(60);
+    }
+}
+
+task StagePostMidboss2 {
+    let dir = 0;
+    while(counter < 128*60) {
+        CreateEnemyDDGA2(-hitboxDDG, 30, 2, rand(30, 60), diff);
+        CreateEnemyDDGA2(GetStgFrameWidth() + hitboxDDG, 30, 2, rand(120, 150), diff);
+        wait(45);
+    }
+}
+
+task StagePart3 {       // gotta last approx. 26*60 (1560)
+    CreateEnemyBBKGVA(90, 11*60, diff);
+    wait(200);
+    loop(4) {
+        CreateEnemyDDGA2(-hitboxDDG, 200, 1 + rand(0, 1), 0, diff);
+        CreateEnemyDDGA2(GetStgFrameWidth() + hitboxDDG, 200, 1 + rand(0, 1), 180, diff);
+        wait(150);
+    }
+    StagePart3sub;
+    wait(70);
+    CreateEnemyArethusaA(GetCenterX() + 140, -hitboxArethusa, 5, 90, diff);
+    CreateEnemyArethusaA(GetCenterX() - 140, -hitboxArethusa, 5, 90, diff);
+    wait(220);
+    CreateEnemyArethusaA(GetCenterX() + 90, -hitboxArethusa, 5, 90, diff);
+    CreateEnemyArethusaA(GetCenterX() - 90, -hitboxArethusa, 5, 90, diff);
+    wait(220);
+    CreateEnemyArethusaA(GetCenterX() + 40, -hitboxArethusa, 5, 90, diff);
+    CreateEnemyArethusaA(GetCenterX() - 40, -hitboxArethusa, 5, 90, diff);
+    loop(4) {
+        CreateEnemyGalateaA(-hitboxGalatea, 120, 1.5, 0, diff);
+        CreateEnemyGalateaA(GetStgFrameWidth() + hitboxGalatea, 120, 1.5, 180, diff);
+        wait(50);
+    }
+}
+
+task StagePart3sub {        // while Arethusas are spawning
+    loop(4) {
+        CreateEnemyDDGA2(-hitboxDDG, 50, 1 + rand(0, 1), 0, diff);
+        CreateEnemyDDGA2(GetStgFrameWidth() + hitboxDDG, 50, 1 + rand(0, 1), 180, diff);
+        wait(120);
+    }
+}
+
+task StagePart4 {           // gotta last 28*60 (1680) frames
+    CreateEnemyLeanderA2(GetCenterX(), -hitboxLeander, 5, 90, 100, 11*60, diff);
+    wait(800);
+    CreateEnemyLeanderA2(GetCenterX(), -hitboxLeander, 5, 90, 100, 11*60, diff);
+    loop(4) {
+        CreateEnemyDDGA2(-hitboxDDG, 40, 1 + rand(0, 1), -10, diff);
+        CreateEnemyDDGA2(GetStgFrameWidth() + hitboxDDG, 40, 1 + rand(0, 1), 190, diff);
+        wait(200);
+    }
+}
+
+task StagePart5 {           // gotta last 30*60 (1800) frames
+    StagePart5sub;
+    ascent(i in 2..9) {
+        loop(2) {
+            CreateEnemyGalateaA2(-hitboxGalatea, 140, 2, 0, diff);
+            CreateEnemyGalateaA2(GetStgFrameWidth() + hitboxGalatea, 140, 1.8, 180, diff);
+            wait(550/i);
+        }
+    }
+}
+
+task StagePart5sub {
+    let y = -hitboxArethusa;
+    wait(9*60);
+    loop(2) {
+        CreateEnemyArethusaA(GetCenterX() + 120, y, 4, 90, diff);
+        wait(220);
+        CreateEnemyArethusaA(GetCenterX() - 120, y, 4, 90, diff);
+        wait(220);
+        CreateEnemyArethusaA(GetCenterX(), y, 4, 90, diff);
+        wait(220);
+    }
+}

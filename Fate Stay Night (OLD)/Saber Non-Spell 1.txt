@@ -1,0 +1,96 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["Saber Non-Spell 1"]
+#Text["Saber Non-Spell 1"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#BGM["./let the stars fall down.mp3"]
+
+#include"script/default_system/Default_ShotConst.txt"
+
+let objBoss;
+
+@Event{
+		alternative(GetEventType())
+	case(EV_REQUEST_LIFE){
+		SetScriptResult(3000);
+        }
+	case(EV_REQUEST_TIMER){
+		SetScriptResult(30);
+	}
+	case(EV_REQUEST_SPELL_SCORE){
+		SetScriptResult(500000);
+	}
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	let imgBoss = GetCurrentScriptDirectory ~ "Saber.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 40, 57);
+	ObjSprite2D_SetDestCenter(objBoss);
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX, 120, 60);
+	
+	TFinalize;
+	MainTask;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss,INFO_LIFE)>0){yield;}
+	Obj_Delete(objBoss);
+	DeleteShotAll(TYPE_ALL,TYPE_IMMEDIATE);
+	SetAutoDeleteObject(true);
+	CloseScript(GetOwnScriptID());
+	return;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss,ObjMove_GetX(objBoss),ObjMove_GetY(objBoss),40);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss,ObjMove_GetX(objBoss),ObjMove_GetY(objBoss),40);
+	
+	yield;
+}
+
+function GetCenterX{
+     return GetStgFrameWidth/2;
+ }
+ function GetCenterY{
+     return GetStgFrameHeight/2;
+ }
+ function wait(n){loop(n){yield;}}
+ 
+ task MainTask {
+	 wait(120);
+	 
+	while(ObjEnemy_GetInfo(objBoss,INFO_LIFE)>0){
+		movement;
+		wait(60);
+		ascent (i in 0..36) {
+			CreateShotA1(ObjMove_GetX(objBoss),ObjMove_GetY(objBoss),2,45+i*8,139,15);
+			CreateShotA1(ObjMove_GetX(objBoss),ObjMove_GetY(objBoss),4,135+i*16,30,15);
+			CreateShotA1(ObjMove_GetX(objBoss),ObjMove_GetY(objBoss),2,225+i*8,139,15);
+			CreateShotA1(ObjMove_GetX(objBoss),ObjMove_GetY(objBoss),4,315+i*16,30,15);
+			wait(5);
+		}
+		wait(60);
+		ascent (i in 0..36) {
+			CreateShotA1(ObjMove_GetX(objBoss),ObjMove_GetY(objBoss),2,45-i*8,139,15);
+			CreateShotA1(ObjMove_GetX(objBoss),ObjMove_GetY(objBoss),4,135-i*16,30,15);
+			CreateShotA1(ObjMove_GetX(objBoss),ObjMove_GetY(objBoss),2,225-i*8,139,15);
+			CreateShotA1(ObjMove_GetX(objBoss),ObjMove_GetY(objBoss),4,315-i*16,30,15);
+			wait(5);
+		}
+		wait(60);
+	}
+ }
+ 
+ task movement {
+	 ObjMove_SetDestAtFrame(objBoss,GetCenterX+rand(-80,80),GetCenterY-rand(0,160),30);
+	 wait(240);
+	 ObjMove_SetDestAtFrame(objBoss,GetCenterX+rand(-80,80),GetCenterY-rand(0,160),30);
+	 wait(300);
+ }
+ 
+

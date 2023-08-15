@@ -1,0 +1,116 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["Cutie Maelstrom - Nowaki Nonspell 1"]
+#Text[""]
+#BGM["./Music/The Upcoming Battle - Armaros.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#System["./../system/Default_System.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+
+let objBoss;
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(3500); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(30); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(200000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), GetCenterY() - 80, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "Images/NowakiChibi.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 54, 72); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(90);
+	main;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	SetAutoDeleteObject(true);
+	killBossPhase(objBoss);
+	wait(120);
+	CloseScript(GetOwnScriptID());
+}
+
+
+
+
+task main {
+	while(!Obj_IsDeleted(objBoss)) {
+		shootA();
+		wait(20);
+		shootA();
+		wait(20);
+		moveX(rand(GetCenterX() - 120, GetCenterX() - 20));	// move after 40 frames
+		wait(60);
+		shootB();
+		wait(50);
+		moveX(rand(GetCenterX() + 20, GetCenterX() + 120));	// move after 150 frames
+		wait(100);
+	}
+}
+
+task moveX(x) {
+	ObjMove_SetDestAtWeight(objBoss, x, GetCenterY() - 80, 45, 3);
+}
+
+task shootA() {		// takes numShots*waitTime frames total (80)
+	let angleDev = 16;
+	let angle = 0;
+	let angleTotal = 180;
+	let numShots = 19;
+	loop(numShots) {
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+		PlaySound("Twinkle1", 30, 5);
+		ascent(i in -1..2) {
+				let obj = CreateShotA1(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 
+				1.7 + absolute(i), angle + i*angleDev, 4 + absolute(i), 5);
+		}
+		angle += angleTotal/numShots;
+		wait(4);
+	}
+}
+
+task shootB() {		// takes numShots*waitTime frames total (120)
+	let angle = 0;
+	let angleTotal = 180;
+	let numBursts = 10;
+	let numShotsB = 14;
+	let radius = 70;
+	loop(numBursts) {
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+		PlaySound("Twinkle1", 50, 15);
+		ascent(i in 0..numShotsB+1) {
+				let obj = CreateShotA1(ObjMove_GetX(objBoss) + radius*cos(angle), 
+				ObjMove_GetY(objBoss) + radius*sin(angle), 2, angle + i*360/numShotsB, 111, 15);
+		}
+		angle += angleTotal/numBursts;
+		wait(12);
+	}
+}
+
+
+

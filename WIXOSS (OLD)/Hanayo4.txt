@@ -1,0 +1,128 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["Hanayo Non-Spell 4"]
+#Text["Hanayo Non-Spell 4"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+
+#include"script/default_system/Default_ShotConst.txt"
+
+let objBoss;
+let objShot;
+let shotSE = "SFX/SFX/ATTACK4.wav";
+let explodeSE = "SFX/SFX/ATTACK3.wav";
+let spiralSE = "SFX/SFX/TWINKLE.wav";
+
+@Event{
+		alternative(GetEventType())
+	case(EV_REQUEST_LIFE){
+		SetScriptResult(5000);
+        }
+	case(EV_REQUEST_TIMER){
+		SetScriptResult(999);
+	}
+	case(EV_REQUEST_SPELL_SCORE){
+		SetScriptResult(600000);
+	}
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	
+	TDrawLoop;
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX, 120, 60);
+	
+	LoadSound(shotSE);
+	LoadSound(explodeSE);
+	LoadSound(spiralSE);
+	
+	TFinalize;
+	MainTask;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss,INFO_LIFE)>0){yield;}
+	Obj_Delete(objBoss);
+	DeleteShotAll(TYPE_ALL,TYPE_IMMEDIATE);
+	SetAutoDeleteObject(true);
+	CloseScript(GetOwnScriptID());
+	return;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss,ObjMove_GetX(objBoss),ObjMove_GetY(objBoss),40);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss,ObjMove_GetX(objBoss),ObjMove_GetY(objBoss),40);
+	
+	yield;
+}
+
+function GetCenterX{
+     return GetStgFrameWidth/2;
+ }
+function GetCenterY{
+     return GetStgFrameHeight/2;
+ }
+function wait(n){loop(n){yield;}}
+ 
+ task TDrawLoop {
+	let imgExRumia = GetCurrentScriptDirectory ~ "Hanayo.png";
+	ObjPrim_SetTexture(objBoss, imgExRumia);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 70, 118);
+	ObjSprite2D_SetDestCenter(objBoss);
+ }
+ 
+ task MainTask {
+	 
+	wait(180);
+	
+	while(ObjEnemy_GetInfo(objBoss,INFO_LIFE)>0){
+		movement;
+		let angleR = rand(0,360);
+		let angleC = 0;
+		let angleC2 = 180;
+		let playerX = GetPlayerX;
+		let playerY = GetPlayerY;
+		loop(30){	
+			angleC = angleC + 11;
+			angleC2 = angleC2 - 11;
+			loop(2){
+				ShotA(playerX+cos(angleC)*70,playerY+sin(angleC)*70,angleC);
+				angleC+=360/2;
+			}
+			loop(2){
+				ShotA(playerX+cos(angleC2)*70,playerY+sin(angleC2)*70,angleC2);
+				angleC2+=360/2;
+			}
+			wait(15);
+		}
+	wait(240)
+	}
+}
+
+ 
+task ShotA(x,y,angle) { 
+	let objTimer = 0;
+	let obj = CreateShotA2(x,y,0,angle,0.01,6,162,10);
+	
+	while (!Obj_IsDeleted(obj)) {
+		objTimer++;
+		
+		if (objTimer == 180) {
+			let angleP = GetAngleToPlayer(obj);
+			let obj2 = CreateShotA1(ObjMove_GetX(obj),ObjMove_GetY(obj),1.5,angleP,34,10);
+			Obj_Delete(obj);
+			wait(180);
+			Obj_Delete(obj2);
+		}
+		yield;
+	
+	}
+}
+ 
+task movement {
+    wait(120);
+	ObjMove_SetDestAtFrame(objBoss, rand(GetCenterX+150,GetCenterX-150), rand(GetCenterY-80,GetCenterY-200), 60);
+}
+

@@ -1,0 +1,139 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["Bullet Valentine's - Novice - Zara & Pola 1"]
+#Text["Nonspell"]
+#BGM["./Music/Sardegna Empire.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+
+let Zara;
+let Pola;
+let startY = GetCenterY() - 100;
+let startX_Zara = GetCenterX() - 80;
+let startX_Pola = GetCenterX() + 80;
+let objScene = GetEnemyBossSceneObjectID();
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(9000); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(60); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(300000); }
+}
+
+@Initialize{
+	SetPauseScriptPath(GetCurrentScriptDirectory() ~ "./system/Pause.dnh");
+    SetEndSceneScriptPath(GetCurrentScriptDirectory() ~ "./system/EndScene.dnh");
+    SetReplaySaveSceneScriptPath(GetCurrentScriptDirectory() ~ "./system/ReplaySaveScene.dnh");
+	
+	Zara = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	Pola = ObjEnemy_Create(OBJ_ENEMY);
+	ObjEnemy_Regist(Zara);
+	ObjEnemy_Regist(Pola);
+	
+	ObjMove_SetDestAtFrame(Zara, startX_Zara, startY, 60);
+	ObjMove_SetDestAtFrame(Pola, startX_Pola, startY, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(Zara, ObjMove_GetX(Zara), ObjMove_GetY(Zara), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(Zara, ObjMove_GetX(Zara), ObjMove_GetY(Zara), 24);
+	
+	ObjEnemy_SetIntersectionCircleToShot(Zara, ObjMove_GetX(Pola), ObjMove_GetY(Pola), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(Zara, ObjMove_GetX(Pola), ObjMove_GetY(Pola), 24);
+	yield;
+}
+
+task TDrawLoop {
+	let imgZara = GetCurrentScriptDirectory() ~ "Images/ZaraChibi.png";
+	let imgPola = GetCurrentScriptDirectory() ~ "Images/PolaChibi.png";
+	ObjPrim_SetTexture(Zara, imgZara);
+	ObjPrim_SetTexture(Pola, imgPola);
+	ObjSprite2D_SetSourceRect(Zara, 1, 1, 63, 75); 	
+	ObjSprite2D_SetSourceRect(Pola, 1, 1, 74, 74); 		
+	ObjSprite2D_SetDestCenter(Zara);
+	ObjSprite2D_SetDestCenter(Pola);
+}
+
+task MainTask {
+	wait(90);
+	main;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(Zara, INFO_LIFE) > 0) { yield; }
+	Obj_Delete(Zara);
+	Obj_Delete(Pola);
+	DeleteShotAll(TYPE_ALL, TYPE_IMMEDIATE);
+	SetAutoDeleteObject(true);
+	
+	PlaySound("Defeat", 50, 0);
+	wait(120);
+	CloseScript(GetOwnScriptID());
+}
+
+
+
+task main {
+	while(!Obj_IsDeleted(Zara)) {
+		shoot(Zara, 180, -1, 253);	// red 253
+		wait(60);
+		shoot(Pola, 0, 1, 256);		// dark blue 256
+		wait(180);
+		
+		shoot(Zara, 180, -1.1, 265);	// orange 265
+		wait(120);
+		shoot(Zara, 180, -1.1, 265);
+		moveZara();
+		wait(30);
+		shoot(Pola, 0, 1.1, 259);		// aqua 259
+		wait(120);
+		shoot(Pola, 0, 1.1, 259);
+		movePola();
+		wait(240);
+		
+		/*shoot(Zara, 180, -0.5, 260);	// dark green 260
+		wait(30);
+		moveZara();
+		wait(30);
+		shoot(Pola, 0, 0.5, 255);		// magenta 255
+		wait(30);
+		movePola();
+		wait(240);*/
+	}
+}
+
+task moveZara() {
+	let newX = rand(startX_Zara - 80, startX_Zara + 160);
+	let newY = rand(startY - 40, startY + 40);
+	ObjMove_SetDestAtWeight(Zara, newX, newY, 45, 5);
+}
+
+task movePola() {
+	let newX = rand(startX_Pola - 160, startX_Pola + 80);
+	let newY = rand(startY - 40, startY + 40);
+	ObjMove_SetDestAtWeight(Pola, newX, newY, 45, 5);
+}
+
+
+task shoot(boss, angleStart, dir, graphic) {		
+	let angleT = angleStart;
+	loop(22) {
+		if(Obj_IsDeleted(boss)) { return; }
+		PlaySound("Atk3", 20, 10);
+		ascent(i in -2..3) {
+			let obj = CreateShotA1(ObjMove_GetX(boss), ObjMove_GetY(boss), 
+				2, angleT + i*25, graphic, 10);
+			ObjMove_AddPatternA2(obj, 30, 1.5, NO_CHANGE, 0, 1.5*dir, 2);
+			ObjMove_AddPatternA2(obj, 120, 1.5, NO_CHANGE, 0, 0, 2);
+		}
+		angleT += 24*dir;
+		wait(8);
+	}
+}
+
+
+

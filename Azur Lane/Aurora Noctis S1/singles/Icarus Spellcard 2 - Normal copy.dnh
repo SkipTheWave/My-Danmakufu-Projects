@@ -1,0 +1,168 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis S1 - Icarus Spellcard 2 - Normal OLD"]
+#Text["Azur Lane - Aurora Noctis[r]Stage 1 Boss[r]\"Icarus - OLD Firepower!\""]
+#BGM["./../../music/A Tiny, Tiny, Clever Commander.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+#include "script/Cutin/Cutin.txt"
+
+let objBoss;
+let objScene = GetEnemyBossSceneObjectID();
+
+@Event{
+	alternative(GetEventType())
+		case(EV_REQUEST_LIFE){ SetScriptResult(3600); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(30); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(160000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	StartSpell;
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 120, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "../images/IcarusChibi.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 57, 73); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(120);
+	fireA;	// big balls
+	wait(240);
+	fireB;	// small balls
+	wait(240);
+	fireC;	// torpedoes
+	//wait(240);
+	//fireD;	// open fire!
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	
+	// this part only applies to spellcards, it's the spellcard bonus
+	if(ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SHOOTDOWN_COUNT)
+    +ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SPELL_COUNT) == 0){
+		AddScore(ObjEnemyBossScene_GetInfo(objScene, INFO_SPELL_SCORE));
+	}
+	
+	SetAutoDeleteObject(true);
+	killBoss(objBoss);
+	wait(180);
+	CloseScript(GetOwnScriptID());
+}
+
+task StartSpell {
+	let cutin = GetCurrentScriptDirectory~"../images/Icarus.png";
+	ObjCutin_SetSpellcardS4("Icarus - Overwhelming Firepower!", cutin, NAZRIN, 110, 190, 240);
+	ObjCutin_LaunchS3(NAZRIN, cutin, "Normal");
+	ObjEnemyBossScene_StartSpell(objScene);
+}
+
+
+
+
+task fireA {
+	let bossX = ObjMove_GetX(objBoss);
+	let bossY = ObjMove_GetY(objBoss);	
+	
+	PlaySound("Atk3", 70, 45);
+	ascent(i in 0..20) {
+		CreateShotA1(bossX, bossY, 4, GetAngleToPlayer(objBoss) + i*360/20, 282, 40);
+	}
+	wait(60);
+	
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		loop(4) {
+			PlaySound("Atk3", 40, 0);
+			if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0){return;}
+			ascent(i in -2..3) {
+				CreateShotA1(bossX, bossY, 4, GetAngleToPlayer(objBoss) + i*30, 282, 0);
+			}
+			wait(20);
+		}
+		wait(90);
+	}
+}
+
+task fireB {
+	let bossX = ObjMove_GetX(objBoss);
+	let bossY = ObjMove_GetY(objBoss);	
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		
+		loop(25) {
+			if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0){return;}
+			PlaySound("Atk3", 40, 15);
+			loop(2) {
+				CreateShotA1(bossX, bossY, 3.5, rand(0, 359), 223, 15);
+			}
+			wait(4);
+		}
+		wait(90);
+	}
+}
+
+task fireC {
+	let bossX = ObjMove_GetX(objBoss);
+	let bossY = ObjMove_GetY(objBoss);	
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {	
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0){return;}
+		let angleP = GetAngleToPlayer(objBoss);
+		
+		PlaySound("Atk1", 80, 0);
+		loop(3) {
+			ascent(j in 0..6) {
+				CreateShotA2(bossX, bossY, 0, angleP - 30, +0.04 + j*0.005, 2.5 + j*0.25, 
+					119, 0);
+			}
+			angleP += 35;
+		}
+		wait(150);
+	}
+}
+
+task fireD {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		let bossX = ObjMove_GetX(objBoss);
+		let bossY = ObjMove_GetY(objBoss);	
+		loop(6) {
+			let angleP = GetAngleToPlayer(objBoss) + rand(-70, 60);
+			ascent(i in 1..4) {
+				let initSpeed = rand(4, 7);
+				let finalSpeed = rand(1, 3);
+				CreateShotA2(bossX, bossY, initSpeed + i*0.5, angleP, -0.2, 
+					finalSpeed + i*0.25, 313, 60);
+			}
+		}
+		wait(60);
+		let angleO = GetAngleToPlayer(objBoss) + 180;
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0){return;}
+		PlaySound("Atk4", 90, 15);
+		loop(30) {
+			CreateShotA2(bossX, bossY, rand(6, 10), angleO + rand(-70, 70), -0.4, 2, 39, 0);
+		}	
+		ScreenShakeA1(30, 10);
+		wait(180);
+	}
+}
+
+
+

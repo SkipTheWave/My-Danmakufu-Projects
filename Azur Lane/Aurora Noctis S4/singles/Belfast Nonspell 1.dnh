@@ -1,0 +1,128 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis S4 - Belfast Nonspell"]
+#Text["Azur Lane - Aurora Noctis[r]Stage 4 Miniboss"]
+#BGM["./../music/Ex Nihilo.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+
+let objBoss;
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(3300); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(16); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(240000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), GetCenterY() - 120, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "../images/BelfastChibi.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 66, 69); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(60);
+	main;
+	wait(60);
+	movement;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	SetAutoDeleteObject(true);
+	killBossPhase(objBoss);
+	wait(120);
+	CloseScript(GetOwnScriptID());
+}
+
+
+
+
+
+task movement {
+	let bossY = GetCenterY() - 120;
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		ObjMove_SetDestAtWeight(objBoss, GetCenterX() - 80,	bossY, 45, 8);
+		wait(90);
+		ObjMove_SetDestAtWeight(objBoss, GetCenterX(), bossY, 45, 8);
+		wait(90);
+		ObjMove_SetDestAtWeight(objBoss, GetCenterX() + 80,	bossY, 45, 8);
+		wait(90);
+		ObjMove_SetDestAtWeight(objBoss, GetCenterX(), bossY, 45, 8);
+		wait(150);
+	}
+}		// 60 + X*300 frames total
+
+task main {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		shotBig(90);
+		shotBig(270);
+		wait(60);
+		shotBig(0);
+		shotBig(180);
+		wait(60);		
+		shotBig(GetAngleToPlayer(objBoss));
+		shotBig(GetAngleToPlayer(objBoss) + 180);
+		wait(60);
+		spiral;
+		wait(150);
+	}
+}
+
+task shotBig(angle) {
+	if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+	let ex = ObjMove_GetX(objBoss);
+	let ey = ObjMove_GetY(objBoss);
+	PlaySound("Twinkle1", 50, 10);
+	let obj = CreateShotA1(ex, ey, 2, angle, 287, 10);
+	while(objInField(obj)) {
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+		let ox = ObjMove_GetX(obj);
+		let oy = ObjMove_GetY(obj);
+		CreateShotA1(ox, oy, 0.8, angle + 130 + rand(-15, 15), 55, 15);
+		CreateShotA1(ox, oy, 0.8, angle - 130 + rand(-15, 15), 55, 15);
+		wait(6);
+	}
+}
+
+task spiral {
+	let angleT = 0;
+	loop(50) {			// frames 100
+		let ex = ObjMove_GetX(objBoss);
+		let ey = ObjMove_GetY(objBoss);
+		let nwaves = 6;
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+		PlaySound("Atk3", 30, 20);
+		ascent(i in 0..nwaves) {
+			let angleE = angleT + i*360/nwaves;
+			let obj = CreateShotA2(ex + cos(angleE)*25, ey + sin(angleE)*25, 6, angleE,
+				-0.15, 0, 311, 20);
+			ObjMove_AddPatternA3(obj, 90, 0, NO_CHANGE, +0.02, 0, 3, 32);
+		}
+		angleT += 8;
+		wait(2);
+	}
+}
+
+

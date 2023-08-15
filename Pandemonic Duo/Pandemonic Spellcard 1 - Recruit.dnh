@@ -1,0 +1,173 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["Pandemonic Duo - Spellcard 1 - Recruit"]
+#Text["Madness \"Chains of Sanity\", \"Recruit\" difficulty"]
+#BGM["./Music/dBu - Pandemonic Planet.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#include "./CrispBrightShot/Shotconstants.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+#include "script/Cutin/Cutin.txt"
+
+let Hecatia;
+let Clownpiece;
+let startY_Hecatia = GetCenterY() - 120;
+let startY_Clownpiece = GetCenterY() - 30;
+let startX_Hecatia = GetCenterX() - 50;
+let startX_Clownpiece = GetCenterX() + 50;
+let objScene = GetEnemyBossSceneObjectID();
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(8000); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(60); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(400000); }
+}
+
+@Initialize{
+	SetPauseScriptPath(GetCurrentScriptDirectory() ~ "./system/Pause.dnh");
+    SetEndSceneScriptPath(GetCurrentScriptDirectory() ~ "./system/EndScene.dnh");
+    SetReplaySaveSceneScriptPath(GetCurrentScriptDirectory() ~ "./system/ReplaySaveScene.dnh");
+	
+	Hecatia = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	Clownpiece = ObjEnemy_Create(OBJ_ENEMY);
+	ObjEnemy_Regist(Hecatia);
+	ObjEnemy_Regist(Clownpiece);
+	StartSpell;
+	
+	ObjMove_SetDestAtFrame(Hecatia, startX_Hecatia, startY_Hecatia, 60);
+	ObjMove_SetDestAtFrame(Clownpiece, startX_Clownpiece, startY_Clownpiece, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(Hecatia, ObjMove_GetX(Hecatia), ObjMove_GetY(Hecatia), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(Hecatia, ObjMove_GetX(Hecatia), ObjMove_GetY(Hecatia), 24);
+	
+	ObjEnemy_SetIntersectionCircleToShot(Hecatia, ObjMove_GetX(Clownpiece), ObjMove_GetY(Clownpiece), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(Hecatia, ObjMove_GetX(Clownpiece), ObjMove_GetY(Clownpiece), 24);
+	yield;
+	yield;
+}
+
+task TDrawLoop {
+	let imgHecatia = GetCurrentScriptDirectory() ~ "Images/Hecatia2-s.png";
+	let imgClownpiece = GetCurrentScriptDirectory() ~ "Images/Clownpiece4-s.png";
+	ObjPrim_SetTexture(Hecatia, imgHecatia);
+	ObjPrim_SetTexture(Clownpiece, imgClownpiece);
+	ObjSprite2D_SetSourceRect(Hecatia, 1, 1, 52, 94); 	
+	ObjSprite2D_SetSourceRect(Clownpiece, 1, 1, 64, 86); 		
+	ObjSprite2D_SetDestCenter(Hecatia);
+	ObjSprite2D_SetDestCenter(Clownpiece);
+}
+
+task MainTask {
+	wait(120);
+	clownpieceMoveMain;
+	shootChainsMain;
+	wait(120);
+	shootFireMain;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(Hecatia, INFO_LIFE) > 0) { yield; }
+	
+	// this part only applies to spellcards, it's the spellcard bonus
+	if(ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SHOOTDOWN_COUNT)
+    +ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SPELL_COUNT) == 0){
+		AddScore(ObjEnemyBossScene_GetInfo(objScene, INFO_SPELL_SCORE));
+	}
+	
+	Obj_Delete(Hecatia);
+	Obj_Delete(Clownpiece);
+	DeleteShotAll(TYPE_ALL, TYPE_IMMEDIATE);
+	SetAutoDeleteObject(true);
+	
+	PlaySound("Defeat", 50, 0);
+	wait(120);
+	CloseScript(GetOwnScriptID());
+}
+
+task StartSpell {
+	let cutin = GetCurrentScriptDirectory~"Images/pandemonic duo.png";
+	ObjCutin_SetSpellcardS4("Madness \"Chains of Sanity\"", cutin, NAZRIN, 255, 25, 100);
+	ObjCutin_LaunchS3(NAZRIN, cutin, "Recruit");
+	ObjEnemyBossScene_StartSpell(objScene);
+}
+
+
+task moveClownpiece() {
+	let newX = rand(GetCenterX() - 80, GetCenterX() + 160);
+	ObjMove_SetDestAtSpeed(Clownpiece, newX, startY_Clownpiece, 1.5);
+}
+
+task clownpieceMoveMain {
+	while(!Obj_IsDeleted(Clownpiece)) {
+		if(ObjMove_GetSpeed(Clownpiece) == 0) {
+			moveClownpiece();
+		}
+		yield;
+	}
+}
+
+task shootChainsMain {
+	while(!Obj_IsDeleted(Hecatia)) {
+		let chainWaves = 15;
+
+		loop(chainWaves) {
+			shootChains;
+			wait(20);
+		}
+		wait(180);
+	}
+}
+
+task shootFireMain {
+	while(!Obj_IsDeleted(Clownpiece)) {
+		let fireBursts = 6;
+		
+		loop(fireBursts) {
+			if(Obj_IsDeleted(Clownpiece)) { return; }
+			fireBurst;
+			wait(15); 
+		}
+		wait(150);
+	}
+}
+
+task shootChains {
+	let chainNum = 8;
+	let chainLength = 35;
+	let angleT = GetAngleToPlayer(Hecatia) + rand(11, 360/chainNum - 11);
+	
+	loop(chainLength) {
+		if(Obj_IsDeleted(Hecatia)) { return; }
+		PlaySound("Twinkle1", 40, 15);
+		ascent(i in 0..chainNum) {
+			let obj = CreateShotA1(ObjMove_GetX(Hecatia), ObjMove_GetY(Hecatia), 
+				5, angleT + i*360/chainNum, KUNAI_S_BLUE, 20);
+		}
+		wait(5);
+	}
+}
+
+task fireBurst {
+	let x = ObjMove_GetX(Clownpiece) + rand(-40, 40);
+	let y = ObjMove_GetY(Clownpiece) + rand(-40, 40);
+	let numShots = 4;
+	
+	ascent(i in 0..numShots) {
+		let shotSpd = rand(5, 10);
+		let shotSlowdown = -shotSpd/20;
+		let shotMinSpd = shotSpd/6;
+		let angle = i*360/numShots * rand(1, 1.99);
+		
+		PlaySound("Atk5", 40, 25);
+		let obj = CreateShotA2(x, y, shotSpd, angle, shotSlowdown, 
+			shotMinSpd, FIREBALL_PINK, 30);
+	}
+}
+
+
+

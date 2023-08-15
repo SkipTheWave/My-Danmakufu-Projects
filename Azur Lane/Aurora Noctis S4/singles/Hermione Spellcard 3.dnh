@@ -1,0 +1,163 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis S4 - Hermione Spellcard 3"]
+#Text["Azur Lane - Aurora Noctis[r]Stage 4 Boss[r]\"Hermione - Pure White Cage\""]
+#BGM["./../music/Battlefield.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#System["./../../system/Default_System.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+#include "script/Cutin/Cutin.txt"
+
+let objBoss;
+let objScene = GetEnemyBossSceneObjectID();
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(6000); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(45); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(300000); }
+}
+
+@Initialize{
+	SetPauseScriptPath(GetCurrentScriptDirectory() ~ "./../../system/Pause.dnh");
+    SetEndSceneScriptPath(GetCurrentScriptDirectory() ~ "./../../system/EndScene.dnh");
+    SetReplaySaveSceneScriptPath(GetCurrentScriptDirectory() ~ "./../../system/ReplaySaveScene.dnh");
+
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	StartSpell;
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 130, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "../images/HermioneChibi.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 71, 74); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(60);
+	cage;
+	wait(60);
+	black;
+	wait(60);
+	rainbow;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	
+	// this part only applies to spellcards, it's the spellcard bonus
+	if(ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SHOOTDOWN_COUNT)
+    +ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SPELL_COUNT) == 0){
+		AddScore(ObjEnemyBossScene_GetInfo(objScene, INFO_SPELL_SCORE));
+	}
+	
+	SetAutoDeleteObject(true);
+	killBoss(objBoss);
+	wait(180);
+	CloseScript(GetOwnScriptID());
+}
+
+task StartSpell {
+	let cutin = GetCurrentScriptDirectory ~ "../images/Hermione.png";
+	ObjCutin_SetSpellcardS4("Hermione - Pure White Cage", cutin, NAZRIN, 240, 240, 240);
+	ObjCutin_LaunchS3(NAZRIN, cutin, "Normal");
+	ObjEnemyBossScene_StartSpell(objScene);
+}
+
+
+task cage {
+	let turndelayA = 35;
+	let turndelayB = 67;
+	cageLine(0, 1, turndelayB);
+	cageLine(50, 1, turndelayA);
+	cageLine(130, 1, turndelayA);
+	cageLine(179, 1, turndelayB);
+	cageLine(0, -1, turndelayB);
+	cageLine(180+50, -1, turndelayA);
+	cageLine(180+130, -1, turndelayA);
+	cageLine(180, -1, turndelayB);
+}
+
+task cageLine(angle, dir, turndelay) {
+	let turn = 0;
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		let radius = 30;
+		let accelx = -0.03;
+		let turndir = 90;
+		let turnwvel = 1;
+		if(angle > 90 && angle < 270) { 
+			accelx = -accelx;
+			turnwvel = -turnwvel; 
+		}
+		if(angle % 180 > 90) {
+			turndir = -turndir;
+		}
+		let obj = CreateShotA1(ObjMove_GetX(objBoss) + radius*cos(angle), ObjMove_GetY(objBoss) + radius*sin(angle),
+			 3, angle, 266, 5);
+		ObjMove_AddPatternB2(obj, 5, NO_CHANGE, NO_CHANGE, accelx, dir*0.1, 0, dir*6);
+		if(turn==1) {
+			ObjMove_AddPatternA2(obj, turndelay, 0.1, ObjMove_GetAngle(obj)+turndir, +0.05, turnwvel*dir, 6);
+		}
+		wait(2);
+		if(turn==0) { turn = 1; }
+		else { turn = 0; }
+	}
+}
+
+
+task black {	
+	let nshots = 30;
+	let delay = 20;
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+			if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+			PlaySound("Atk4", 40, delay);
+			loop(nshots) {
+				CreateShotA1(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), rand(0.4, 1.9), rand(0,360), 251, delay);
+			}
+			wait(60);
+}
+}
+
+
+task rainbow {		// takes 50 frames total
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		let dir = [-1,1][rand_int(0,1)];
+		let graphic = rand_int(252,265);
+		let angleT = 0;
+		loop(30) {
+			if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+			PlaySound("Twinkle1", 40, 10);
+			ascent(i in 0..4) {
+				ascent(j in 0..4) {
+					let spd = 1.6 + j/8;
+					let obj = CreateShotA2(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 
+						2*spd, angleT + i*360/4, -0.1, 0, 266, 10);
+					ObjMove_AddPatternA3(obj, 60, 0, NO_CHANGE, +0.28, 0*dir, spd, graphic);
+					ObjMove_SetAngularVelocity(obj, 0.4*dir)
+				}
+			}
+			angleT += 12*dir;
+			wait(5);
+		}
+		wait(20);
+	}
+}
+
+
+

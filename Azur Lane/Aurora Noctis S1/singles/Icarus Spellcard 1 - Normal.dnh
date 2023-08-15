@@ -1,0 +1,122 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis S1 - Icarus Spellcard 1 - Normal"]
+#Text["Azur Lane - Aurora Noctis[r]Stage 1 Boss[r]\"All Out Assault - Open Fire!\""]
+#BGM["./../music/A Tiny, Tiny, Clever Commander.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+#include "script/Cutin/Cutin.txt"
+
+let objBoss;
+let objScene = GetEnemyBossSceneObjectID();
+
+@Event{
+	alternative(GetEventType())
+		case(EV_REQUEST_LIFE){ SetScriptResult(3400); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(30); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(150000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	StartSpell;
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 120, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "../images/IcarusChibi.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 57, 73); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(120);
+	fire;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	
+	// this part only applies to spellcards, it's the spellcard bonus
+	if(ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SHOOTDOWN_COUNT)
+    +ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SPELL_COUNT) == 0){
+		AddScore(ObjEnemyBossScene_GetInfo(objScene, INFO_SPELL_SCORE));
+	}
+	
+	SetAutoDeleteObject(true);
+	killBossPhase(objBoss);
+	wait(120);
+	CloseScript(GetOwnScriptID());
+}
+
+task StartSpell {
+	let cutin = GetCurrentScriptDirectory~"../images/Icarus.png";
+	ObjCutin_SetSpellcardS4("All Out Assault - Open Fire!", cutin, NAZRIN, 110, 190, 240);
+	ObjCutin_LaunchS3(NAZRIN, cutin, "Normal");
+	ObjEnemyBossScene_StartSpell(objScene);
+}
+
+
+
+
+task fire {
+	let bossX = ObjMove_GetX(objBoss);
+	let bossY = ObjMove_GetY(objBoss);	
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		
+		let shotY = bossY - 30;
+		loop(8) {
+			let randX = rand(20, 130);
+			let shotX1 = bossX + randX;
+			let shotX2 = bossX - randX;
+			shot(shotX1, shotY);
+			shot(shotX2, shotY);
+			wait(12);
+		}
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0){return;}
+		CreateStraightLaserA1(bossX, bossY+10, 90, 512, 20, 60, 1015, 120);
+		wait(120);
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0){return;}
+		PlaySound("Laser1", 50, 0);
+		ScreenShakeA1(30, 5);
+		wait(60);
+	}
+}
+
+task shot(x, y) {
+	if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0){return;}
+	PlaySound("Atk4", 50, 15);
+	ascent(i in 1..6) {
+		CreateShotA2(x, y, 6 + i*0.5, 90, -0.2, 2 + i*0.25, 313, 15);
+	}
+	wait(15);
+	if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0){return;}
+	loop(12) {
+		let obj = CreateShotA2(x, y, rand(6, 10), rand(220, 320), -0.4, 2, 39, 0);
+		if (x > GetCenterX()) { 
+			ObjMove_AddPatternB2(obj, 30, NO_CHANGE, NO_CHANGE, 0.1, 0.1, 2, 5); }
+		else { 
+			ObjMove_AddPatternB2(obj, 30, NO_CHANGE, NO_CHANGE, -0.1, 0.1, -2, 5); }
+	}	
+	ScreenShakeA1(5, 5);
+	
+	wait(10);
+}
+
+
+

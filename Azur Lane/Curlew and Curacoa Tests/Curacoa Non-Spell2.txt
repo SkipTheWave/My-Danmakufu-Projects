@@ -1,0 +1,93 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["Curacoa Tutorial Help 3"]
+#Text["Curacoa is helping Skip follow Danmakufu tutorials[r]Please be patient with them"]
+#BGM["./Aci-L.mp3"]
+#include "script/default_system/Default_ShotConst.txt"
+
+let objBoss;
+
+@Event{
+    alternative(GetEventType())
+    case(EV_REQUEST_LIFE){ SetScriptResult(2000); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(30); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(20000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 150, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgCuracoa = GetCurrentScriptDirectory() ~ "CuracoaKaiChibi.png";
+	ObjPrim_SetTexture(objBoss, imgCuracoa);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 55, 74); 			// 56x75 sprite
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(60);
+	fireA;
+	wait(60);
+	fireB;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	Obj_Delete(objBoss);
+	DeleteShotAll(TYPE_ALL, TYPE_IMMEDIATE);
+	SetAutoDeleteObject(true);
+	CloseScript(GetOwnScriptID());
+}
+
+function GetCenterX(){ return GetStgFrameWidth() / 2; }
+function GetCenterY(){ return GetStgFrameHeight() / 2; }
+function wait(n){ loop(n){yield;} }
+
+task fireA {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		spiralA(13.5);
+		wait(150);
+		spiralA(-13.5);
+		wait(150);
+	}
+}
+
+task spiralA(angleShift) {
+	let angleT = rand(0,360);
+	loop(60) {
+		ascent(i in 0..2) {
+			CreateShotA1(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss) - 90, 3.5, angleT + i*180, DS_BALL_BS_BLUE, 15);
+			CreateShotA1(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss) - 90, 3.5, angleT + 90 + i*180, DS_BALL_M_A_PURPLE, 15);
+		}
+		angleT += angleShift;
+		wait(2);
+	}
+}
+
+task fireB {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		let angleT = GetAngleToPlayer(objBoss);
+		loop(4) {
+			ascent(i in -1..2) {
+				CreateShotA1(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 6, angleT + i*1, DS_MISSILE_ORANGE, 20);
+			}
+			wait(5);
+		}
+		wait(10);
+	}
+}

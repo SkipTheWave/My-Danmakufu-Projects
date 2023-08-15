@@ -1,0 +1,130 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis S2 - Jamaica Nonspell - Normal"]
+#Text["Azur Lane - Aurora Noctis[r]Stage 2 Miniboss"]
+#BGM["../music/Surrounding.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+
+let objBoss;
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(2500); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(16); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(150000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 120, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "../images/JamaicaChibi.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 67, 74); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(60);
+	shoot;
+	wait(60);
+	movement;
+	
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	SetAutoDeleteObject(true);
+	killBossPhase(objBoss);
+	wait(120);
+	CloseScript(GetOwnScriptID());
+}
+
+
+task movement {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		ObjMove_SetDestAtFrame(objBoss, 
+			rand(GetCenterX() + 60, GetCenterX() - 60), 
+			rand(GetCenterY() - 100, GetCenterY() - 160), 30);
+		wait(120);
+	}
+}
+
+task shoot {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		lasers;
+		wait(120);
+	}
+}
+
+task lasers {
+	let bossX = ObjMove_GetX(objBoss);
+	let bossY = ObjMove_GetY(objBoss);
+	
+	loop(1) {
+		PlaySound("Laser2", 40, 0);
+		ascent(i in 0..2) {
+			if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0){return;}
+			let objLaser = CreateCurveLaserA1(bossX, bossY, 4, 250 + i*40, 30, 12, 1019, 0);
+			ObjCrLaser_SetTipDecrement(objLaser, 0);
+			laserMovement(objLaser);
+			laserFire(objLaser);
+		}
+		wait(60);
+	}
+}
+
+task laserMovement(obj) {
+	let angleP = GetAngleToPlayer(obj);
+	let angVel;
+	if(ObjMove_GetAngle(obj) > 270) { angVel = 5 }
+		else { angVel = -5; }
+
+	loop(60) {
+		ObjMove_SetAngularVelocity(obj,angVel);
+		if(angVel > 0) { angVel -= 0.05; }
+			else { angVel += 0.05; }
+		yield;
+	}
+	ObjMove_AddPatternA4(obj, 100, NO_CHANGE, 0, +0.2, 0, 4, GetPlayerObjectID(), NO_CHANGE);
+}
+
+task laserFire(obj) {
+	let angleA = rand(0, 359);
+	let angleB = rand(0, 359);
+	loop(7) {
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+		PlaySound("Atk4", 30, 10);
+		let objX = ObjMove_GetX(obj);
+		let objY = ObjMove_GetY(obj);
+		CreateShotA1(objX, objY, 1.75, angleA, 3, 10);
+		CreateShotA1(objX, objY, 1, angleB, 15, 10);
+		
+		CreateShotB2(objX, objY, rand(-0.5, 0.5), -rand(0.1, 0.5), rand(-0.1, 0.1), 
+		-rand(0.01, 0.1), rand(-2, 2), rand(-1, -4), 702, 0);
+		CreateShotB2(objX, objY, rand(-1, 1), -rand(0.1, 1), rand(-0.2, 0.2), 
+		-rand(0.01, 0.2), rand(-2, 2), rand(-1, -4), 708, 0);
+		
+		angleA += 25;
+		angleB += 15;
+		wait(6);
+	}
+}
+

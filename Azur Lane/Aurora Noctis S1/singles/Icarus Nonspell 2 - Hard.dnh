@@ -1,0 +1,121 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis S1 - Icarus Nonspell 2 - Hard"]
+#Text["Azur Lane - Aurora Noctis[r]Stage 1 Boss"]
+#BGM["./../music/A Tiny, Tiny, Clever Commander.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+
+let objBoss;
+
+@Event{
+	alternative(GetEventType())
+		case(EV_REQUEST_LIFE){ SetScriptResult(2900); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(25); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(80000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 120, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "../images/IcarusChibi.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 57, 73); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(60);
+	shoot;
+	wait(120);
+	movement;
+	
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	killBossPhase(objBoss);
+	wait(120);
+	CloseScript(GetOwnScriptID());
+}
+
+
+task movement {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		ObjMove_SetDestAtFrame(objBoss, 
+			rand(GetCenterX() + 60, GetCenterX() - 60), 
+			rand(GetCenterY() - 80, GetCenterY() - 140), 30);
+		wait(150);
+	}
+}
+
+task shoot {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		let angleP = GetAngleToPlayer(objBoss);
+		gun(angleP);
+		wait(20);
+		gun(angleP + rand(15, 60));
+		wait(20);
+		gun(angleP - rand(15, 60));
+		wait(20);
+		gun(angleP + rand(15, 60));
+		wait(20);
+		gun(angleP - rand(15, 60));
+		wait(30);
+		spam;
+		wait(40);
+	}
+}
+
+task gun(angle) {
+	let bossX = ObjMove_GetX(objBoss);
+	let bossY = ObjMove_GetY(objBoss);
+	let shotCount = 1;
+	
+	loop(9) {
+		let anglePP = angle;
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0){return;}
+		PlaySound("Atk4", 40, 10);
+		loop(shotCount) {
+			CreateShotA2(bossX, bossY, 9, anglePP - shotCount + 1, -0.22, 3.5, 127, 10);
+			anglePP += 2;
+		}
+		shotCount += 1;
+		wait(6);
+	}
+}
+
+task spam {
+	let bossX = ObjMove_GetX(objBoss);
+	let bossY = ObjMove_GetY(objBoss);
+	loop(8){
+		let shotX = bossX + rand(-30, 30);
+		let shotY = bossY + rand(-40, 40);
+		let angleR = rand(0, 359);
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0){return;}
+		PlaySound("Atk3", 30, 20);
+		loop(10) {
+			CreateShotA2(shotX, shotY, 10, angleR, -0.35, 1, 48, 20);
+			angleR += 360/10;
+		}
+		wait(10);
+	}
+}
+

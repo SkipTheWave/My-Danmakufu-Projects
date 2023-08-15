@@ -1,0 +1,116 @@
+// enemy constants
+let hitboxArethusa = 30;
+
+task CreateEnemyArethusaA(x, y, spd, angle, difficulty) { 
+    let objEnemy = CreateEnemyArethusa(x, y, 300, 8);
+    movementUTurnB(objEnemy, spd, angle, 50, 340);
+    alternative (difficulty)
+    // (objEnemy, interval, nshots, speed)
+    case (0) {      // Easy
+        //ArethusaBulletA(objEnemy, 240, 10, 1.1);
+        ArethusaBulletA2(objEnemy, 13, 1.7);
+    }
+    case (1) {      // Normal
+        ArethusaBulletA(objEnemy, 180, 14, 1.1);
+        ArethusaBulletA2(objEnemy, 11, 2);
+    }
+    case (2) {      // Hard
+        ArethusaBulletA(objEnemy, 120, 35, 1.2);
+        ArethusaBulletA2(objEnemy, 4, 2.4);
+    }
+    case (3) {        // Lunatic
+        ArethusaBulletA(objEnemy, 90, 85, 1.8);
+    }
+}
+
+/* task CreateEnemyArethusaA2(x, y, spd, angle, difficulty) { 
+    let objEnemy = CreateEnemyArethusa(x, y, 300, 8);
+    movementContA(objEnemy, spd, angle);
+    alternative (difficulty)
+    // (objEnemy, interval, nshots, speed)
+    case (0) {      // Easy
+        ArethusaBulletA2(objEnemy, 60, 13, 2.5);
+    }
+    case (1) {      // Normal
+        ArethusaBulletA2(objEnemy, 50, 21, 3.5);
+    }
+    case (2) {      // Hard
+        //ArethusaBulletA2(objEnemy, 40, 33, 4.5);
+        ArethusaBulletB(objEnemy, 120, 40, 4.5, 25);
+    }
+    case (3) {        // Lunatic
+        ArethusaBulletA2(objEnemy, 30, 35, 4.5);
+    }
+} */
+
+/* Base enemy */
+function CreateEnemyArethusa(x, y, life, points) {
+    //return CreateEnemy(x, y, life, imgArethusa, 1, 1, 58, 83, hitboxArethusa, points);
+    return CreateEnemy(x, y, life, imgArethusa, 1, 1, 53, 75, hitboxArethusa, points);
+}
+
+/* Bullet tasks */
+task ArethusaBulletA(objEnemy, interval, nshots, speed) {
+    wait(90);
+    while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) > 0) {
+        //PlaySound("Twinkle1", 40, 0);
+        ascent(i in 0..nshots) {
+            let angle = GetAngleToPlayer(objEnemy) + i*360/nshots;
+            CreateShotA2(ObjMove_GetX(objEnemy), ObjMove_GetY(objEnemy), speed*2, angle, -speed/50, speed, 350, 0);
+        }
+        wait(interval);
+    }
+}
+
+task ArethusaBulletA2(objEnemy, interval, speed) {
+    wait(60);
+    while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) > 0) {
+        //PlaySound("Twinkle1", 40, 0);
+        CreateShotA2(ObjMove_GetX(objEnemy), ObjMove_GetY(objEnemy), speed*2, rand(0, 360), -speed/50, speed, 351, 0);
+        wait(interval);
+    }
+}
+
+task ArethusaBulletA3(objEnemy, interval, nshots, speed) {
+    wait(90);
+    while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) > 0) {
+        //PlaySound("Twinkle1", 50, 0);
+        ascent(i in 0..nshots) {
+            let graphic = 340;
+            let angle = GetAngleToPlayer(objEnemy) + i*360/nshots;
+            CreateShotA2(ObjMove_GetX(objEnemy), ObjMove_GetY(objEnemy), 0, angle, speed/50, speed, graphic, 0);
+        }
+        wait(interval);
+    }
+}
+
+task ArethusaBulletB(objEnemy, interval, nshots, speed, dev) {
+    wait(120);
+    while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) > 0) {
+        let angle = GetAngleToPlayer(objEnemy);
+        ascent(i in 0..nshots) {
+            if(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) <= 0) {return;}
+            PlaySound("Twinkle1", 35, 10);
+            let graphic = rand_int(236, 237);
+            let x = ObjMove_GetX(objEnemy) + rand(-dev, dev);
+            let y = ObjMove_GetY(objEnemy) + rand(-dev, dev);
+            let accel = rand(speed/60, speed/30);
+            let effSpd = rand(speed/2, speed*1.5);
+            let obj = CreateShotA2(x, y, 0, angle, accel, effSpd, graphic, 20);
+            ArethusaBulletBaux(obj, dev);
+            wait(1);
+        }
+        wait(interval);
+    }
+}
+
+task ArethusaBulletBaux(obj, dev) {
+    let dir = rand_int(-1, 1);
+    wait(rand(0, 30));
+    while(!Obj_IsDeleted(obj)) {
+        ObjMove_SetAngularVelocity(obj, dir*dev/55);
+        wait(30);
+        ObjMove_SetAngularVelocity(obj, -dir*dev/55);
+        wait(30);
+    }
+}

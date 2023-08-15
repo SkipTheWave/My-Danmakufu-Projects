@@ -1,0 +1,48 @@
+#TouhouDanmakufu[Plural]
+#ScriptVersion[3]
+#Title["Hanayo Boss Fight"]
+#Text["Battle against Hanayo from WIXOSS"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#BGM["./Rebellion.ogg"]
+
+@Initialize{
+	let dir = GetCurrentScriptDirectory;
+	SetPlayerLife(3);
+
+	TPlural;
+}
+
+@MainLoop{
+	yield;
+}
+
+@Finalize
+{
+}
+
+task TPlural{
+	let dir = GetCurrentScriptDirectory;
+	//loop(60){yield;}
+	SetForbidPlayerShot(false);
+	SetForbidPlayerSpell(false);
+
+	let obj = ObjEnemyBossScene_Create;
+	ObjEnemyBossScene_Add(obj,0,dir~"Hanayo1.txt"); // 
+
+	ObjEnemyBossScene_Add(obj,1,dir~"Hanayo2.txt"); // 
+	ObjEnemyBossScene_Add(obj,2,dir~"Hanayo3.txt"); // 
+	ObjEnemyBossScene_Add(obj,3,dir~"Hanayo4.txt"); // 
+
+	ObjEnemyBossScene_LoadInThread(obj);
+	ObjEnemyBossScene_Regist(obj);
+
+	while(!Obj_IsDeleted(obj)) { yield; }
+
+	SetForbidPlayerShot(true);
+	SetForbidPlayerSpell(true);
+
+	//TStopAllBGM;
+	yield;
+	CloseScript(GetOwnScriptID);
+
+}

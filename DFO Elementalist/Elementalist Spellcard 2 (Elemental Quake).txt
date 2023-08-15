@@ -1,0 +1,164 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["Elementalist Spellcard 2 - Elemental Quake"]
+#Text[""]
+#BGM["./Pathway.mp3"]
+#include "script/default_system/Default_ShotConst.txt"
+#include "script/Cutin/Cutin.txt"
+
+let objBoss;
+let objScene = GetEnemyBossSceneObjectID();
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(6000); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(50); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(100000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	StartSpell;
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 120, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "elementalist(overmind)-sprite.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 75, 114); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(60);
+	Quake;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	
+	// this part only applies to spellcards, it's the spellcard bonus
+	if(ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SHOOTDOWN_COUNT)
+    +ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SPELL_COUNT) == 0){
+		AddScore(ObjEnemyBossScene_GetInfo(objScene, INFO_SPELL_SCORE));
+	}
+	
+	Obj_Delete(objBoss);
+	DeleteShotAll(TYPE_ALL, TYPE_IMMEDIATE);
+	SetAutoDeleteObject(true);
+	CloseScript(GetOwnScriptID());
+}
+
+task StartSpell {
+	let cutin = GetCurrentScriptDirectory~"elementalist(overmind)-t.png";
+	ObjCutin_SetSpellcardS4("Elementalist - Elemental Curtain", cutin, NAZRIN, 110, 190, 240);
+	ObjCutin_LaunchS3(YABUSAME, cutin, "Normal");
+	ObjEnemyBossScene_StartSpell(objScene);
+}
+
+function GetCenterX(){ return GetStgFrameWidth() / 2; }		// 384 / 2
+function GetCenterY(){ return GetStgFrameHeight() / 2; }	// 448 / 2
+function wait(n){ loop(n){yield;} }
+function rand_int(min, max){
+	return round(rand(min, max))
+}
+
+
+task Quake {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		QuakePart(80, 3*60);
+		QuakePart(-80, 3*60);
+		wait(60);
+		QuakePart(120, 2*60);
+		QuakePart(-120, 2*60);
+		wait(60);
+		QuakePart(160, 1*60);
+		QuakePart(-160, 1*60);
+		wait(120);
+		
+		ascent(i in 2..5) {
+			let quakeX = GetCenterX() + i*40;
+			loop(6) {
+				CreateShotB2(quakeX, GetStgFrameHeight(), rand(-2, 2), rand(-3, -8),
+					0, 0.05, 2, 4, rand_int(1, 8), 120);
+			}
+			loop(4) {
+				CreateShotB2(quakeX, GetStgFrameHeight(), rand(-2, 2), rand(-3, -8),
+					0, 0.075, 2, 4, rand_int(9, 16), 120);
+			}
+			loop(2) {
+				CreateShotB2(quakeX, GetStgFrameHeight(), rand(-2, 2), rand(-3, -8),
+					0, 0.1, 2, 4, rand_int(25, 32), 120);
+			}
+			CreateStraightLaserA1(quakeX, GetStgFrameHeight(), 270, 512, 40, 
+				120, 161, 120);
+		}
+		ascent(i in 2..5) {
+			let quakeX = GetCenterX() - i*40;
+			loop(6) {
+				CreateShotB2(quakeX, GetStgFrameHeight(), rand(-2, 2), rand(-3, -8),
+					0, 0.05, 2, 4, rand_int(1, 8), 120);
+			}
+			loop(4) {
+				CreateShotB2(quakeX, GetStgFrameHeight(), rand(-2, 2), rand(-3, -8),
+					0, 0.075, 2, 4, rand_int(9, 16), 120);
+			}
+			loop(2) {
+				CreateShotB2(quakeX, GetStgFrameHeight(), rand(-2, 2), rand(-3, -8),
+					0, 0.1, 2, 4, rand_int(25, 32), 120);
+			}
+			CreateStraightLaserA1(quakeX, GetStgFrameHeight(), 270, 512, 40, 
+				120, 161, 120);
+		}
+		wait(120);
+		ScreenShakeA1(20, 10);
+	
+		wait(180);
+	}
+}
+
+task QuakePart(distance, time) {
+	let element = rand_int(0, 7);
+	loop(8) {
+		CreateShotB2(GetCenterX() + distance, GetStgFrameHeight(), rand(-2, 2), rand(-3, -8),
+			0, 0.05, 2, 4, 1+element, 60);
+	}
+	loop(5) {
+		CreateShotB2(GetCenterX() + distance, GetStgFrameHeight(), rand(-2, 2), rand(-3, -8),
+			0, 0.075, 2, 4, 9+element, 60);
+	}
+	loop(3) {
+		CreateShotB2(GetCenterX() + distance, GetStgFrameHeight(), rand(-2, 2), rand(-3, -8),
+			0, 0.1, 2, 4, 25+element, 60);
+	}
+	CreateStraightLaserA1(GetCenterX() + distance, GetStgFrameHeight(), 270, 512, 30, 
+		time, 153+element, 60);
+	wait(60);
+	ScreenShakeA1(10, 8);
+	
+}
+
+task ScreenShakeA1(shaketime, intensity){		// NOT DONE BY ME
+    while(shaketime > 0){
+        Set2DCameraFocusX(GetStgFrameWidth/2 + rand(-intensity, intensity));
+        Set2DCameraFocusY(GetStgFrameHeight/2 + rand(-intensity, intensity));
+        shaketime--;
+        yield;
+    }
+    Set2DCameraFocusX(GetStgFrameWidth/2);
+    Set2DCameraFocusY(GetStgFrameHeight/2);
+    yield;
+}

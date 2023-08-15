@@ -1,0 +1,52 @@
+#TouhouDanmakufu[Plural]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis Stage 1 Midboss 2 - Easy"]
+#Text["Glowworm (2)"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#BGM["../music/Frozen Eternal Capital.ogg"]
+
+let dir = GetCurrentScriptDirectory();
+let BGM = dir ~ "../music/Frozen Eternal Capital.ogg";
+
+@Event{
+}
+
+@Initialize{
+	SetPauseScriptPath(GetCurrentScriptDirectory() ~ "../../system/Pause.dnh");
+    SetEndSceneScriptPath(GetCurrentScriptDirectory() ~ "../../system/EndScene.dnh");
+    SetReplaySaveSceneScriptPath(GetCurrentScriptDirectory() ~ "../../system/ReplaySaveScene.dnh");
+	
+	TPlural;
+}
+
+@MainLoop{
+	yield;
+}
+
+@Finalize{
+	//RemoveSound(BGM);
+}
+
+task TPlural {
+	let obj = ObjEnemyBossScene_Create();
+	
+	ObjEnemyBossScene_Add(obj, 0, dir ~ "../singles/Glowworm Nonspell 1 - Easy.dnh");
+	ObjEnemyBossScene_Add(obj, 0, dir ~ "../singles/Glowworm Spellcard 1 - Easy.dnh");
+	
+	ObjEnemyBossScene_LoadInThread(obj);
+	ObjEnemyBossScene_Regist(obj);
+	//music(obj);
+	
+	while(!Obj_IsDeleted(obj)) {
+		yield;
+	}
+	
+	CloseScript(GetOwnScriptID());
+}
+
+/*task music(obj) {
+	LoadSound(BGM);
+	PlayBGM(BGM, 11.8, 299.21);
+}*/
+
+function wait(n) { loop(n) { yield; } }

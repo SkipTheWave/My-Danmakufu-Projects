@@ -1,0 +1,140 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis S3 - Valiant Nonspell 3 - Easy"]
+#Text["Azur Lane - Aurora Noctis[r]Stage 3 Boss"]
+#BGM["./music/Takt of Heroes.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+
+let objBoss;
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(5500); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(35); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(200000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 120, 90);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "../images/ValiantChibi.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 74, 74); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(90);
+	engage;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	SetAutoDeleteObject(true);
+	killBossPhase(objBoss);
+	wait(120);
+	CloseScript(GetOwnScriptID());
+}
+
+
+
+task engage {
+	bubble(0, 1.5, 1);
+	bubble(180, 1.5, 1);
+	wait(60);
+	bubble(320, 2, 2);
+	bubble(220, 2, 2);
+	wait(60);
+	bubble(20, 2.5, 2);
+	bubble(160, 2.5, 2);
+	wait(120);
+	
+}
+
+task bubble(angle, speed, type) {
+	if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+	PlaySound("Atk1", 50, 0);
+	let obj = CreateShotA2(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), speed, angle,
+		-0.02, 0, 377, 0);
+	ObjShot_SetSpellResist(obj, true);
+	while(ObjMove_GetSpeed(obj) != 0) { yield; }
+	if(type == 1) { fireA1(obj); }
+	else { fireA2(obj); }
+	fireB(obj);
+}
+
+task fireA1(obj) {
+	let objX = ObjMove_GetX(obj);
+	let objY = ObjMove_GetY(obj);
+	let angleDev = 40;
+	while(!Obj_IsDeleted(objBoss)) {
+		let angleT = rand(50, 130) - angleDev*2;
+		let graphic = 305;
+		loop(3) {
+			if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+			PlaySound("Atk3", 40, 20);
+			ascent(i in 0..3) {
+				ascent(j in 0..3) {
+					CreateShotA1(objX, objY, 1.3 + j/7, angleT + i*angleDev*2, graphic, 20);
+				}
+			}
+			angleT += 22;
+			wait(16);
+		}
+		wait(rand_int(240, 300));
+	}
+}
+
+task fireA2(obj) {
+	let objX = ObjMove_GetX(obj);
+	let objY = ObjMove_GetY(obj);
+	while(!Obj_IsDeleted(objBoss)) {
+		let graphic = 301;
+		let angleDev = 70;
+		loop(3) {
+			if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+			PlaySound("Atk3", 40, 20);
+			ascent(i in 0..3) {
+				let angleT = GetAngleToPlayer(obj) - angleDev;
+				ascent(j in 0..3) {
+					CreateShotA1(objX, objY, 1.7 + j/6, angleT + i*angleDev, graphic, 20);
+				}
+			}
+			wait(16);
+		}
+		wait(rand_int(240, 300));
+	}
+}
+
+task fireB(obj) {
+	let objX = ObjMove_GetX(obj);
+	let objY = ObjMove_GetY(obj);
+	let nshots = 8;
+	while(!Obj_IsDeleted(objBoss)) {
+		ascent(i in 0..nshots) {
+			if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+			//PlaySound("Atk3", 50, 15);
+			CreateShotA2(objX, objY, 7, i*360/nshots, -0.3, 1.1, 30, 15);
+		}
+		wait(rand_int(180, 200));
+	}
+}
+

@@ -1,0 +1,49 @@
+// enemy constants
+let hitboxRook = 50;
+
+// angle is angle, spd is initial speed, frames are the amount of frames it takes to halt
+task CreateEnemyRookMKIIIA(x, y, spd, angle, difficulty) { 
+    let objEnemy = CreateEnemyRookMKIII(x, y, 800, 14);
+    movementContA(objEnemy, spd, angle);
+    alternative (difficulty)
+    case (0) {      // Easy
+        RookMKIIIBulletA(objEnemy, 120, 3, 16, 8);
+    }
+    case (1) {      // Normal
+        RookMKIIIBulletA(objEnemy, 120, 3, 16, 8);
+    }
+    case (2) {      // Hard
+        RookMKIIIBulletA(objEnemy, 90, 2, 20, 8);
+    }
+    case (3) {        // Lunatic
+        RookMKIIIBulletA(objEnemy, 120, 3, 16, 8);
+    }
+}
+
+/* Base enemy */
+function CreateEnemyRookMKIII(x, y, life, points) {
+    return CreateEnemy(x, y, life, imgSiren, 366, 346, 366+90, 346+54, hitboxRook, points);
+}
+
+
+/* Bullet tasks */
+
+// aqua and blue lines around
+task RookMKIIIBulletA(objEnemy, interval, spd, nlines, nshots) { // 153
+    let nlinesB = nlines/2;
+    let angleS = 0;
+    while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) > 0 && ObjMove_GetY(objEnemy) < GetStgFrameHeight() - 100) {
+        wait(interval);
+        ascent(j in 0..nshots) {
+            while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) <= 0) {return;}
+            ascent(i in 0..nlines) {
+                let obj = CreateShotA2(ObjMove_GetX(objEnemy), ObjMove_GetY(objEnemy), spd*2, angleS + i*360/nlines, -spd/20, spd/2, 134, 5);
+            }
+            ascent(i in 0..nlinesB) {
+                let obj = CreateShotA1(ObjMove_GetX(objEnemy), ObjMove_GetY(objEnemy), spd*1.5, i*360/nlinesB, 137, 5);
+            }
+            wait(7);
+            angleS += 0.8;
+        }
+    }
+}

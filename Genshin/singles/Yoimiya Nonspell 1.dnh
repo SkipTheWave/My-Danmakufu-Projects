@@ -1,0 +1,148 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["Genshin - Yoimiya - Nonspell 1"]
+#Text[""]
+#BGM["./../music/Inazuma Battle 2.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+
+let objBoss;
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(4000); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(25); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(200000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 90, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "../images/yoimiya-sprite.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 77, 94); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(60);
+	fireworks;
+	movement;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	SetAutoDeleteObject(true);
+	
+	killBossPhase(objBoss);
+	wait(120);
+	CloseScript(GetOwnScriptID());
+}
+
+
+task movement {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		ObjMove_SetDestAtFrame(objBoss, 
+			rand(GetCenterX() + 50, GetCenterX() - 50), 
+			rand(GetCenterY() - 80, GetCenterY() - 100), 30);
+		wait(100);
+	}
+}
+
+task fireworks {
+	let angleAim = 90;
+	let radius = 100;		// pixels
+	let arc = 100;
+	let narrows = 4;
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+ 		loop(2) {
+			PlaySound("Atk3", 20, 10);
+			ascent(i in 0..narrows) {
+				let angle = angleAim - arc/2 + i*(arc/(narrows - 1));
+				let arrow = CreateShotA2(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 5, angle, -5/50, 0, 370, 15);
+				fireworksArrow(arrow);
+			}
+			wait(90);
+		}
+		wait(200);
+		sparkler;
+		wait(120);
+	}
+}
+
+task fireworksArrow(arrow) {
+	wait(50);
+	let x = ObjMove_GetX(arrow);
+	let y = ObjMove_GetY(arrow);
+	let angle = rand(0, 360);
+	let nshots = 14;
+	Obj_Delete(arrow);
+	if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) < 0) {return;}
+	PlaySound("Atk4", 50, 30);
+	ascent(i in 0..nshots) {
+		fwshotO(x, y, angle + i*360/nshots, 7);
+		fwshotO(x, y, rand(0, 360), rand(3, 6));
+	}
+}
+
+task fwshotO(x, y, angle, spd) {
+	let spdB = spd - spd/10;
+	CreateShotA2(x, y, spd, angle, -spd/40, spd/8, 47, 30);
+	CreateShotA2(x, y, spdB, angle, -spdB/40, spdB/8, 223, 30);
+}
+
+task fwshotR(x, y, angle, spd) {
+	let spdB = spd - spd/10;
+	CreateShotA2(x, y, spd, angle, -spd/40, spd/8, 35, 30);
+	CreateShotA2(x, y, spdB, angle, -spdB/40, spdB/8, 211, 30);
+}
+
+task sparkler {
+	let xaxis = 120;
+	let yaxis = 70;
+	let angle = 0;
+	let angleSpark = rand(0, 360);
+	let color = rand_int(0, 13);
+	while(angle < 170) {
+		let x = ObjMove_GetX(objBoss) + xaxis*cos(angle);
+		let y = ObjMove_GetY(objBoss) + yaxis*sin(angle);
+		sparklershot(x, y, angleSpark, color);
+		angleSpark += 20;
+		angle += 3;
+		wait(1);
+	}
+	color = rand_int(0, 13);
+	while(angle > 20) {
+		let x = ObjMove_GetX(objBoss) + xaxis*cos(angle);
+		let y = ObjMove_GetY(objBoss) + yaxis*sin(angle);
+		sparklershot(x, y, angleSpark, color);
+		angleSpark += 20;
+		angle -= 3;
+		wait(1);
+	}
+
+}
+
+task sparklershot(x, y, angle, color) {
+	PlaySound("Twinkle2", 20, 10);
+	CreateShotA1(x, y, 1.6, angle, 252 + color, 5);
+	CreateShotA1(x, y, 2.8, rand(0, 360), 210 + color, 5);
+}
+

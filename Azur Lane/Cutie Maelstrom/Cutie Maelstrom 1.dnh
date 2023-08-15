@@ -1,0 +1,59 @@
+#TouhouDanmakufu[Plural]
+#ScriptVersion[3]
+#Title["Cutie Maelstrom 1"]
+#Text["Feat. Nowaki, don't question the title"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#System["./../system/Default_System.txt"]
+
+
+let dir = GetCurrentScriptDirectory();
+let BGMstage = dir ~ "./Music/Ex Nihilo.ogg";
+let BGMboss = dir ~ "./Music/The Upcoming Battle - Armaros.ogg";
+
+@Event{
+}
+
+@Initialize{
+	SetPauseScriptPath(GetCurrentScriptDirectory() ~ "./../system/Pause.dnh");
+    SetEndSceneScriptPath(GetCurrentScriptDirectory() ~ "./../system/EndScene.dnh");
+    SetReplaySaveSceneScriptPath(GetCurrentScriptDirectory() ~ "./../system/ReplaySaveScene.dnh");
+	TPlural;
+}
+
+@MainLoop{
+	yield;
+}
+
+@Finalize{
+	RemoveSound(BGMstage);
+	RemoveSound(BGMboss);
+}
+
+task TPlural {
+	let obj = ObjEnemyBossScene_Create();
+	
+	ObjEnemyBossScene_Add(obj, 0, dir ~ "./Nowaki Nonspell 1.dnh");
+	ObjEnemyBossScene_Add(obj, 1, dir ~ "./Nowaki Nonspell 2.dnh");
+	ObjEnemyBossScene_Add(obj, 2, dir ~ "./Nowaki Nonspell 3.dnh");
+	ObjEnemyBossScene_Add(obj, 3, dir ~ "./Nowaki Spellcard 1.dnh");
+	
+	ObjEnemyBossScene_LoadInThread(obj);
+	ObjEnemyBossScene_Regist(obj);
+	music(obj);
+	
+	while(!Obj_IsDeleted(obj)) {
+		yield;
+	} 
+	
+	CloseScript(GetOwnScriptID());
+}
+
+task music(obj) {
+	LoadSound(BGMstage);
+	LoadSound(BGMboss);
+	let stepCount = ObjEnemyBossScene_GetInfo(obj, INFO_REMAIN_STEP_COUNT);
+	
+	PlayBGM(BGMboss, 0, 212.0);
+}
+
+function wait(n) { loop(n) { yield; } }

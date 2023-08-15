@@ -1,0 +1,125 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis S1 - Glowworm Nonspell - Easy"]
+#Text["Azur Lane - Aurora Noctis[r]Stage 1 Miniboss"]
+#BGM["../../music/Frozen Eternal Capital.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+
+let objBoss;
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(2600); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(19); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(50000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 120, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "../images/GlowwormChibi.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 65, 74); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(60);
+	light;
+	wait(60);
+	torpedos;
+	movement;
+	
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	SetAutoDeleteObject(true);
+	
+	killBossPhase(objBoss);
+	wait(120);
+	CloseScript(GetOwnScriptID());
+}
+
+task movement {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		ObjMove_SetDestAtFrame(objBoss, 
+			rand(GetCenterX() + 50, GetCenterX() - 50), 
+			rand(GetCenterY() - 80, GetCenterY() - 100), 30);
+		wait(240);
+	}
+}
+
+task torpedos {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		let bossX = ObjMove_GetX(objBoss);
+		let bossY = ObjMove_GetY(objBoss);
+		let angleP = GetAngleToPlayer(objBoss);
+		
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0){return;}
+		PlaySound("Atk1", 80, 0);
+		ascent(i in -1..2) {
+			ascent(j in 0..4) {		
+				CreateShotA2(bossX, bossY, 0, angleP + i*40, +0.03 + j*0.005, 2.5 + j*0.25, 
+					119, 0);
+			}
+		}
+		wait(120);
+	}
+}
+
+task light {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		let bossX = ObjMove_GetX(objBoss);
+		let bossY = ObjMove_GetY(objBoss);
+
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0){return;}
+		let objLight = CreateShotA1(bossX, bossY, 1.5, 90, 860, 0);
+		wait(30);
+		//lightShots(objLight);
+		lightMovement(objLight);
+		
+		while(!Obj_IsDeleted(objLight)) { yield; }
+	}
+}
+
+task lightShots(obj) {
+	let angleT = rand(0, 359);
+	
+	while (!Obj_IsDeleted(obj) && (ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0)) {
+		let objX = ObjMove_GetX(obj);
+		let objY = ObjMove_GetY(obj);
+		
+		PlaySound("Twinkle1", 30, 0);
+		CreateShotA2(objX, objY, 3, angleT, -0.05, 1, 11, 0);
+		angleT += 25;
+		wait(20);
+	}
+}
+
+task lightMovement(obj) {
+	while (!Obj_IsDeleted(obj)) {
+		ObjMove_SetAngularVelocity(obj, rand(-2, 2));
+		wait(120);
+	}
+}
+
+

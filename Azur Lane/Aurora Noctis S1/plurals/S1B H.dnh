@@ -1,0 +1,55 @@
+#TouhouDanmakufu[Plural]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis Stage 1 Boss - Hard"]
+#Text["Icarus (4)"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#BGM["../music/A Tiny, Tiny, Clever Commander.ogg"]
+
+
+let dir = GetCurrentScriptDirectory();
+let BGM = dir ~ "../music/A Tiny, Tiny, Clever Commander.ogg";
+
+@Event{
+}
+
+@Initialize{
+	SetPauseScriptPath(GetCurrentScriptDirectory() ~ "../../system/Pause.dnh");
+    SetEndSceneScriptPath(GetCurrentScriptDirectory() ~ "../../system/EndScene.dnh");
+    SetReplaySaveSceneScriptPath(GetCurrentScriptDirectory() ~ "../../system/ReplaySaveScene.dnh");
+	
+	TPlural;
+}
+
+@MainLoop{
+	yield;
+}
+
+@Finalize{
+	//RemoveSound(BGM);
+}
+
+task TPlural {
+	let obj = ObjEnemyBossScene_Create();
+	
+	ObjEnemyBossScene_Add(obj, 0, dir ~ "../singles/Icarus Nonspell 1 - Hard.dnh");
+	ObjEnemyBossScene_Add(obj, 0, dir ~ "../singles/Icarus Spellcard 1 - Hard.dnh");
+	ObjEnemyBossScene_Add(obj, 1, dir ~ "../singles/Icarus Nonspell 2 - Hard.dnh");
+	ObjEnemyBossScene_Add(obj, 1, dir ~ "../singles/Icarus Spellcard 2 - Hard.dnh");
+	
+	ObjEnemyBossScene_LoadInThread(obj);
+	ObjEnemyBossScene_Regist(obj);
+	//music(obj);
+	
+	while(!Obj_IsDeleted(obj)) {
+		yield;
+	}
+	
+	CloseScript(GetOwnScriptID());
+}
+
+task music(obj) {
+	LoadSound(BGM);
+	PlayBGM(BGM, 14.8, 173.65);
+}
+
+function wait(n) { loop(n) { yield; } }

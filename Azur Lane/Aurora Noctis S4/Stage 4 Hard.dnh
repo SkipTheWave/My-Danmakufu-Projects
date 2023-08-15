@@ -1,0 +1,362 @@
+#TouhouDanmakufu[Stage]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis Stage 4 - Hard"]
+#Text["TODO"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#System["./../system/Default_System.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+#include "script/Skip Scripts/Azur Lane/common/libraries/azurlane_enemy_lib.dnh"
+
+let dir = GetCurrentScriptDirectory();
+let BGMstage = dir ~ "./music/Ex Nihilo.ogg";
+let BGMboss = dir ~ "./music/Battlefield.ogg";
+let stagepart = 0; 
+let counter = 0;
+let bgm;
+let bgm2;
+let diff = 2;
+
+@Event {
+    alternative(GetEventType())
+    case(EV_PAUSE_ENTER){
+        if(stagepart == 0){
+            ObjSound_Stop(bgm);
+        } 
+        if(stagepart == 1){
+            ObjSound_Stop(bgm2);
+        } 
+    }
+    case(EV_PAUSE_LEAVE){
+        if(stagepart == 0){
+            ObjSound_Play(bgm);
+        } 
+        if(stagepart == 1){
+            ObjSound_Play(bgm2);
+        } 
+    }
+    case(EV_USER_STAGE+1){                  //Generic boss minor item drop
+        let arg = GetEventArgument(0); //x, y
+        loop(11) {
+            CreateItemA1(ITEM_POINT, arg[0] + rand(-30, 30), arg[1] + rand(-30, 30), 5000);
+        }
+    }
+    case(EV_USER_STAGE+2){                  //Generic boss major item drop
+        let arg = GetEventArgument(0); //x, y
+        loop(22) {
+            CreateItemA1(ITEM_POINT, arg[0] + rand(-30, 30), arg[1] + rand(-30, 30), 5000);
+        }
+    }
+}
+
+@Initialize {
+    SetPauseScriptPath(GetCurrentScriptDirectory() ~ "../system/Pause.dnh");
+    SetEndSceneScriptPath(GetCurrentScriptDirectory() ~ "../system/EndScene.dnh");
+    SetReplaySaveSceneScriptPath(GetCurrentScriptDirectory() ~ "../system/ReplaySaveScene.dnh");
+    RenderBG;
+	
+	TStage;
+}
+
+@MainLoop {
+    counter++;
+	yield;
+}
+
+@Finalize {
+	RemoveSound(BGMstage);
+	RemoveSound(BGMboss);
+}
+
+task TStage
+{
+    let pathMB1 = dir ~ "./plurals/S4MB1 H.dnh";
+    let pathMB2 = dir ~ "./plurals/S4MB2 H.dnh";
+    let pathMB3 = dir ~ "./plurals/S4MB3 H.dnh";
+    let pathB = dir ~ "./plurals/S4B H.dnh"; 
+
+    LoadEnemies();
+	bgm2 = ObjSound_Create();
+    ObjSound_Load(bgm2, BGMboss);
+    StageBGM(bgm2, 2);
+    bgm = ObjSound_Create();
+    ObjSound_Load(bgm, BGMstage);
+    StageBGM(bgm, 1);
+    ObjSound_Play(bgm);
+    counter = 0;
+
+    //test
+    //StagePart5;
+    //while(counter < 28*60) {yield;}
+    //ClearEnemiesBullets();
+
+    StagePart1;
+    while(counter < 12*60) {yield;}
+
+    StagePart2;
+    while(counter < 38*60) { yield; }
+
+    ClearEnemiesBullets();
+    let mb1Script = LoadScriptInThread(pathMB1);
+    StartScript(mb1Script);
+    while(GetCommonData("bossActive", 0) == 1 && GetPlayerState() != STATE_END)
+    {
+        yield;
+    }
+    StagePostMidboss1;
+    while(counter < 63.5*60) { yield; }
+
+    ClearEnemiesBullets();
+	let mb2Script = LoadScriptInThread(pathMB2);
+	StartScript(mb2Script);
+    while(GetCommonData("bossActive", 0) == 1 && GetPlayerState() != STATE_END)
+    {
+        yield;
+    }
+    StagePostMidboss2;
+    while(counter < 115*60) { yield; }
+
+    // for timing planning, add 106s
+    StagePart3;
+    while(counter < 141*60) { yield; }
+
+    ClearEnemiesBullets();
+	let mb3Script = LoadScriptInThread(pathMB3);
+	StartScript(mb3Script);
+    while(GetCommonData("bossActive", 0) == 1 && GetPlayerState() != STATE_END)
+    {
+        yield;
+    }
+    StagePostMidboss3;
+    while(counter < 165.5*60) { yield; }
+
+    StagePart4;
+    while(counter < 191*60) { yield; }
+
+    StagePart5;
+
+    while(counter < 218.5*60) { yield; }
+    ClearEnemiesBullets();
+	// Boss handling starts here
+	stagepart = 1;
+    ObjSound_Stop(bgm);
+	ObjSound_Play(bgm2);
+
+	let bScript = LoadScriptInThread(pathB);
+	StartScript(bScript);
+    while(!IsCloseScript(bScript) && GetPlayerState() != STATE_END)
+    {
+        yield;
+    }
+
+    UnloadEnemies();
+    wait(240);
+    CloseStgScene();
+}
+
+function StageBGM(obj, ID){
+    ObjSound_SetSoundDivision(obj, SOUND_BGM);
+    ObjSound_SetRestartEnable(obj, true);
+    ObjSound_SetLoopEnable(obj, true);
+    ObjSound_SetLoopTime(obj, 0, 300);
+    if(ID == 1){ObjSound_SetLoopTime(obj, 13.3, 119.25);}
+    if(ID == 2){ObjSound_SetLoopTime(obj, 26.3, 187.9);}
+    return obj;
+}
+
+task RenderBG {
+    let currRed = 0;
+    let currGreen = 15;
+    let currBlue = 50;
+    let frontAlpha = 50;
+    let backAlpha = 255;
+    let obj = ObjPrim_Create(OBJ_PRIMITIVE_2D);
+    ObjPrim_SetPrimitiveType(obj, PRIMITIVE_TRIANGLESTRIP);
+    ObjPrim_SetVertexCount(obj, 4);
+    ObjPrim_SetVertexPosition(obj, 0, 0, 0, 0);
+    ObjPrim_SetVertexPosition(obj, 1, 0, 448, 0);
+    ObjPrim_SetVertexPosition(obj, 2, 384, 0, 0);
+    ObjPrim_SetVertexPosition(obj, 3, 384, 448, 0);
+    
+    ObjRender_SetAlpha(obj, backAlpha);
+    ObjRender_SetColor(obj, currRed, currGreen, currBlue);
+    Obj_SetRenderPriorityI(obj, 21);
+    ObjRender_SetBlendType(obj, BLEND_ADD_ARGB);  
+
+    let obj2 = ObjPrim_Create(OBJ_PRIMITIVE_2D);
+    ObjPrim_SetPrimitiveType(obj2, PRIMITIVE_TRIANGLESTRIP);
+    ObjPrim_SetVertexCount(obj2, 4);
+    ObjPrim_SetVertexPosition(obj2, 0, 0, 0, 0);
+    ObjPrim_SetVertexPosition(obj2, 1, 0, 448, 0);
+    ObjPrim_SetVertexPosition(obj2, 2, 384, 0, 0);
+    ObjPrim_SetVertexPosition(obj2, 3, 384, 448, 0);
+    
+    ObjRender_SetAlpha(obj2, frontAlpha);
+    ObjRender_SetColor(obj2, currRed, currGreen, currBlue);
+    Obj_SetRenderPriorityI(obj2, 45);
+    ObjRender_SetBlendType(obj2, BLEND_ALPHA);
+
+/*     // BG color transition  
+    let finalRed = 130;
+    let finalGreen = 35;
+    let finalBlue = 0;
+    let finalBackAlpha = 255;
+    let diffRed = finalRed - currRed;
+    let diffGreen = finalGreen - currGreen;
+    let diffBlue = finalBlue - currBlue;
+    let diffBackAlpha = finalBackAlpha - backAlpha;
+    let diffFrontAlpha = frontAlpha;
+    let startFrames = 60*60;
+    while(counter < startFrames){yield;}
+    let bossFrames = 180*60;
+    while(counter < bossFrames) {
+        currRed += diffRed/bossFrames;
+        currGreen += diffGreen/bossFrames;
+        currBlue += diffBlue/bossFrames;
+        backAlpha += diffBackAlpha/bossFrames;
+        frontAlpha += diffFrontAlpha/bossFrames;
+        ObjRender_SetColor(obj, currRed, currGreen, currBlue);
+        ObjRender_SetAlpha(obj, backAlpha);
+        ObjRender_SetColor(obj2, currRed, currGreen, currBlue);
+        ObjRender_SetAlpha(obj2, frontAlpha);
+        yield;
+    } */
+}
+
+task StagePart1 {      
+    let x = -hitboxComet;
+    let angle = -20;
+    let spd = 1;
+    while(counter < 35*60) {
+        wait(90);
+        CreateEnemyCometC(x, rand(100,140), spd, angle, [-1,1][rand_int(0,1)], diff);
+    }
+}
+
+task StagePart2 {   
+    let x = GetStgFrameWidth() + hitboxCygnet;
+    let angle = 200;
+    let spd = 1;
+    while(counter < 35*60) {
+        CreateEnemyCygnetA(x, rand(100,140), spd, angle, [-1,1][rand_int(0,1)], diff);
+        wait(120);
+    }
+}
+
+task StagePostMidboss1 {
+    let spd = 1.4;
+    while(counter < 60.5*60) {
+        let y = rand(50, 200);
+        let angle = rand(-20, 70);
+        CreateEnemyPawnMKIIIA(-hitboxPawn, y, spd, angle, diff);
+        CreateEnemyPawnMKIIIA(GetStgFrameWidth() + hitboxPawn, y, spd, 180-angle, diff);
+        wait(60);
+    }
+}
+
+task StagePostMidboss2 {
+    let spd = 1.8;
+    while(counter < 113*60) {
+        let y = rand(50, 200);
+        let angle = rand(-20, 70);
+        CreateEnemyPawnMKIIIA(-hitboxPawn, y, spd, angle, diff);
+        CreateEnemyPawnMKIIIA(GetStgFrameWidth() + hitboxPawn, y, spd, 180-angle, diff);
+        wait(45);
+    }
+}
+
+task StagePart3 {           // 28s
+    let distance = 70;
+    let spd = 0.9;
+    CreateEnemyRookMKIIIA(GetCenterX(), -hitboxRook, spd, 85, diff);
+    wait(4*60);
+    CreateEnemyRookMKIIIA(GetCenterX() + distance, -hitboxRook, spd, 80, diff);
+    CreateEnemyRookMKIIIA(GetCenterX() - distance, -hitboxRook, spd, 100, diff);
+    wait(6*60);
+    CreateEnemyRookMKIIIA(GetCenterX(), -hitboxRook, spd, 85, diff);
+    loop(3) {
+        wait(3.5*60);
+        let y = rand(100, 140);
+        let angleC = 200;
+        let dir = [-1,1][rand_int(0,1)];
+        CreateEnemyCometC(GetStgFrameWidth() + hitboxComet, y, 1, angleC, dir, diff);
+        CreateEnemyCometC(-hitboxComet, y, 1, 180-angleC, -dir, diff);
+    }
+    CreateEnemyRookMKIIIA(GetCenterX() + distance, -hitboxRook, spd, 80, diff);
+    CreateEnemyRookMKIIIA(GetCenterX() - distance, -hitboxRook, spd, 100, diff);
+    loop(5) {
+        wait(1*60);
+        let y = rand(100, 140);
+        let angleC = 200;
+        let dir = [-1,1][rand_int(0,1)];
+        CreateEnemyCometC(GetStgFrameWidth() + hitboxComet, y, 1, angleC, dir, diff);
+        CreateEnemyCometC(-hitboxComet, y, 1, 180-angleC, -dir, diff);
+    }
+}
+
+task StagePostMidboss3 {
+    let spd = 2.2;
+    while(counter < 163*60) {
+        let y = rand(50, 200);
+        let angle = rand(-20, 70);
+        CreateEnemyPawnMKIIIA(-hitboxPawn, y, spd, angle, diff);
+        CreateEnemyPawnMKIIIA(GetStgFrameWidth() + hitboxPawn, y, spd, 180-angle, diff);
+        wait(30);
+    }
+}
+
+task StagePart4 {        
+    StagePart4Rook;
+    wait(40);
+    StagePart4Pawn;
+}
+
+task StagePart4Rook {
+    let spd = 0.9;
+    while(counter < 179*60) {
+        let angle = rand(80, 100);
+        CreateEnemyRookMKIIIA(GetCenterX() + rand(-150,150), -hitboxRook, spd, angle, diff);
+        wait(180);
+    }
+}
+
+task StagePart4Pawn {
+    let spd = 1.8;
+    while(counter < 181*60) {
+        let y = rand(50, 200);
+        let angle = rand(-20, 70);
+        CreateEnemyPawnMKIIIA(-hitboxPawn, y, spd, angle, diff);
+        CreateEnemyPawnMKIIIA(GetStgFrameWidth() + hitboxPawn, y, spd, 180-angle, diff);
+        wait(60);
+    }
+    wait(90);
+    spd = 2.6;
+    while(counter < 190*60) {
+        let y = rand(50, 200);
+        let angle = rand(-25, 75);
+        CreateEnemyPawnMKIIIB(-hitboxPawn, y, spd, angle, diff);
+        CreateEnemyPawnMKIIIB(GetStgFrameWidth() + hitboxPawn, y, spd, 180-angle, diff);
+        wait(30);
+    }
+}
+
+task StagePart5 {           // 25s
+    StagePart5Comet;
+    while(counter < 210*60) {
+        wait(110);
+        let y = rand(100, 140);
+        let angleC = 200;
+        let dir = [-1,1][rand_int(0,1)];
+        CreateEnemyCygnetB(GetStgFrameWidth() + hitboxCygnet, y, 1, angleC, dir, diff);
+    }
+}
+
+task StagePart5Comet {
+    while(counter < 207*60) {
+        wait(150);
+        let y = rand(100, 140);
+        let angleC = 200;
+        let dir = [-1,1][rand_int(0,1)];
+        CreateEnemyCometC(-hitboxComet, y, 1, 180-angleC, -dir, diff);
+    }
+}

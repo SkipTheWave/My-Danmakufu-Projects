@@ -1,0 +1,145 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis S2 - Eagle Spellcard 2 - Hard"]
+#Text["Azur Lane - Aurora Noctis[r]Stage 2 Boss[r]\"Royal Arts - Swordbearing Eagle\""]
+#BGM["./music/Revolt.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+#include "script/Cutin/Cutin.txt"
+
+let objBoss;
+let objScene = GetEnemyBossSceneObjectID();
+
+@Event{
+	alternative(GetEventType())
+		case(EV_REQUEST_LIFE){ SetScriptResult(4000); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(44); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(200000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	StartSpell;
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 120, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "../images/EagleChibi.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 59, 72); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(60);
+	eagles;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	
+	// this part only applies to spellcards, it's the spellcard bonus
+	if(ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SHOOTDOWN_COUNT)
+    +ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SPELL_COUNT) == 0){
+		AddScore(ObjEnemyBossScene_GetInfo(objScene, INFO_SPELL_SCORE));
+	}
+	
+	SetAutoDeleteObject(true);
+	killBossPhase(objBoss);
+	wait(120);
+	CloseScript(GetOwnScriptID());
+}
+
+task StartSpell {
+	let cutin = GetCurrentScriptDirectory ~ "../images/Eagle.png";
+	ObjCutin_SetSpellcardS4("Royal Arts - Swordbearing Eagle", cutin, NAZRIN, 250, 60, 10);
+	ObjCutin_LaunchS3(NAZRIN, cutin, "Hard");
+	ObjEnemyBossScene_StartSpell(objScene);
+}
+
+
+
+
+task eagles {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		let count = 0;
+		loop(40) {
+			if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+			let x = [0, GetStgFrameWidth()][rand_int(0, 1)];
+			let angleB = 0;
+			if(x == GetStgFrameWidth()) { angleB = 180; }
+			let dir = 1;
+			if(angleB == 180) { dir = -1; }
+			let obj = CreateShotA1(x, rand(20, 70), 6, angleB, 875, 0);
+			
+			swordEagle(obj, dir);
+			featherStorm(obj, count);
+			swordStorm(obj, count);
+			wait(10);
+			count += 12;
+		}
+		wait(250);
+	}
+}
+
+task featherStorm(obj, count) {
+	while(count > 30 && count < 220) {
+			loop(3) {
+				if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+				if(Obj_IsDeleted(obj)) { return; }
+				PlaySound("Atk4", 40, 15);
+				let angle = atan2(ObjMove_GetY(obj) - ObjMove_GetY(objBoss), ObjMove_GetX(obj) - ObjMove_GetX(objBoss)) + 120;
+				let objFeather = CreateShotA1(ObjMove_GetX(obj), ObjMove_GetY(obj), 1.6, angle, 157, 20);
+				ObjMove_SetAngularVelocity(objFeather, 0.15);
+				wait(rand_int(5, 15));
+		}
+	}
+}
+
+task swordStorm(obj, count) {
+	while(count > 430 && count < 440) {
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+		if(Obj_IsDeleted(obj)) { return; }
+		PlaySound("Atk3", 45, 30);
+		ascent(i in 0..3) {
+			ascent(j in -1..2) {
+			CreateShotA1(ObjMove_GetX(obj), ObjMove_GetY(obj), 4 + i/2, GetAngleToPlayer(obj) + rand(-1, 1) + j*24,
+			 300, 30);
+			}
+		}
+		wait(4);
+	}
+}
+
+task swordEagle(obj, dir) {
+	wait(rand(0, 20));
+	if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+	PlaySound("Atk3", 30, 15);
+	ascent(i in 0..6) {
+		CreateShotA2(ObjMove_GetX(obj), ObjMove_GetY(obj), 9 + i, 90, -0.2,
+			3, 302, 15);
+	}
+	
+	while(ObjMove_GetX(obj) != GetCenterX()) { yield; }
+	ObjMove_SetAngularVelocity(obj, dir*4.5);
+	
+	wait(150);
+	Obj_Delete(obj);
+}
+
+
+

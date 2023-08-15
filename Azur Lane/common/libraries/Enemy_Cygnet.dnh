@@ -1,0 +1,94 @@
+// enemy constants
+let hitboxCygnet = 30;
+
+task CreateEnemyCygnetA(x, y, spd, angle, dir, difficulty) {
+    let objEnemy = CreateEnemyCygnet(x, y, 260, 5);
+    movementContA(objEnemy, spd, angle);
+    alternative (difficulty)
+    //objEnemy, dir
+    case (0) {      // Easy
+        CygnetBulletA(objEnemy, dir);
+    }
+    case (1) {      // Normal
+        CygnetBulletA(objEnemy, dir);
+    }
+    case (2) {      // Hard
+        CygnetBulletA(objEnemy, dir);
+    }
+    case (3) {       // Lunatic
+        CygnetBulletA(objEnemy, dir);
+    }
+}
+
+task CreateEnemyCygnetB(x, y, spd, angle, dir, difficulty) {
+    let objEnemy = CreateEnemyCygnet(x, y, 260, 5);
+    movementContA(objEnemy, spd, angle);
+    alternative (difficulty)
+    //objEnemy, dir
+    case (0) {      // Easy
+        CygnetBulletA(objEnemy, dir);
+    }
+    case (1) {      // Normal
+        CygnetBulletA(objEnemy, dir);
+    }
+    case (2) {      // Hard
+        CygnetBulletA2(objEnemy, dir);
+    }
+    case (3) {       // Lunatic
+        CygnetBulletA(objEnemy, dir);
+    }
+}
+
+/* Base enemy */
+function CreateEnemyCygnet(x, y, life, points) {
+    return CreateEnemy(x, y, life, imgCygnet, 1, 1, 58, 76, hitboxCygnet, points);
+}
+
+/* Bullet tasks */
+
+// Slow dense spiral
+task CygnetBulletA(objEnemy, dir) {
+    let nshots = 3;
+    let spd = 3;
+    let waitF = 9;
+    let angleChange = 3;
+    let angleRand = 3;
+    let angleT = rand(0, 360);
+    let radius = 40;
+    while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) > 0) {
+        
+        ascent(i in 0..nshots) {
+            let angleS = angleT + i*360/nshots;
+            let x = ObjMove_GetX(objEnemy) + radius*cos(angleS);
+            let y = ObjMove_GetY(objEnemy) + radius*sin(angleS);
+            let obj = CreateShotA2(x, y, spd/8, angleS + rand(-angleRand,angleRand), +spd/90, spd, 665, 6);
+            ObjMove_AddPatternA2(obj, 75, spd, NO_CHANGE, -spd/30, 0, spd/5);
+        }
+        angleT += angleChange*dir;
+        wait(waitF);
+    }
+}
+
+task CygnetBulletA2(objEnemy, dir) {
+    let nshots = 2;
+    let spd = 3;
+    let waitF = 12;
+    let angleChange = 8;
+    let angleRand = 3;
+    let angleT = rand(0, 360);
+    let radius = 40;
+    while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) > 0) {
+        
+        ascent(i in 0..nshots) {
+            let angleS = angleT + i*360/nshots;
+            let x = ObjMove_GetX(objEnemy) + radius*cos(angleS);
+            let y = ObjMove_GetY(objEnemy) + radius*sin(angleS);
+            let obj = CreateShotA2(x, y, spd/8, angleS + rand(-angleRand,angleRand), +spd/80, spd, 667, 6);
+            ObjMove_AddPatternA2(obj, 40, spd, NO_CHANGE, -spd/30, 0, spd/8);
+            ObjMove_AddPatternA4(obj, 80, spd/8, 0, +spd/60, 0, spd, GetPlayerObjectID, NO_CHANGE);
+            ObjMove_AddPatternA2(obj, 140, spd, NO_CHANGE, -spd/30, 0, spd/4);
+        }
+        angleT += angleChange*dir;
+        wait(waitF);
+    }
+}

@@ -1,0 +1,46 @@
+// enemy constants
+let hitboxBulldog = 30;
+
+// angle is angle, spd is initial speed, stopFrames are the amount of frames it takes to halt
+// TODO
+task CreateEnemyBulldogA(x, y, spd, angle, difficulty) { 
+    let objEnemy = CreateEnemyBulldog(x, y, 80, 3);
+    movementContA(objEnemy, spd, angle);
+    alternative (difficulty)
+    // (objEnemy, minInterval, maxInterval, nwaves, spd)
+    case (0) {      // Easy
+        BulldogBulletA(objEnemy, 160, 200, 2, 1.2);
+    }
+    case (1) {      // Normal
+        BulldogBulletA(objEnemy, 140, 200, 3, 1.5);
+    }
+    case (2) {      // Hard
+        BulldogBulletA(objEnemy, 100, 180, 4, 1.8);
+    }
+    case (3) {        // Lunatic
+        BulldogBulletA(objEnemy, 60, 140, 6, 2.2);
+    }
+}
+
+/* Base enemy */
+function CreateEnemyBulldog(x, y, life, points) {
+    return CreateEnemy(x, y, life, imgBulldog, 1, 1, 60, 76, hitboxBulldog, points);
+}
+
+/* Bullet tasks */
+task BulldogBulletA(objEnemy, minInterval, maxInterval, nwaves, spd) {
+    let angleRand = 40;
+    let angleCoverage = 120;
+    let angleWaves = angleCoverage/(nwaves-1);
+    let angleShot = 1;
+    while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) > 0) {
+        let angle = 90 + rand(-angleRand, angleRand) - angleCoverage/2;
+        loop(nwaves) {
+            ascent(j in 0..2) {
+                CreateShotA1(ObjMove_GetX(objEnemy), ObjMove_GetY(objEnemy), spd, angle + j*angleShot - angleShot/2, 87, 0);
+            }
+            angle += angleWaves;
+        }
+        wait(rand_int(minInterval, maxInterval));
+    }
+}

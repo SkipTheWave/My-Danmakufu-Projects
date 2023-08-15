@@ -1,0 +1,54 @@
+#TouhouDanmakufu[Plural]
+#ScriptVersion[3]
+#Title["Bullet Valentine's - Novice - Zara & Pola Battle"]
+#Text["Bullet Valentine's"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#System["./system/Default_System.txt"]
+
+
+let dir = GetCurrentScriptDirectory();
+let BGMboss = dir ~ "./Music/Sardegna Empire.ogg";
+
+@Event{
+}
+
+@Initialize{
+	SetPauseScriptPath(GetCurrentScriptDirectory() ~ "./system/Pause.dnh");
+    SetEndSceneScriptPath(GetCurrentScriptDirectory() ~ "./system/EndScene.dnh");
+    SetReplaySaveSceneScriptPath(GetCurrentScriptDirectory() ~ "./system/ReplaySaveScene.dnh");
+	TPlural;
+}
+
+@MainLoop{
+	yield;
+}
+
+@Finalize{
+	RemoveSound(BGMboss);
+}
+
+task TPlural {
+	let obj = ObjEnemyBossScene_Create();
+	
+	ObjEnemyBossScene_Add(obj, 0, dir ~ "./Zara Pola Nonspell 1 - Novice.dnh");
+	ObjEnemyBossScene_Add(obj, 1, dir ~ "./Zara Pola Spellcard 1 - Novice.dnh");
+	
+	ObjEnemyBossScene_LoadInThread(obj);
+	ObjEnemyBossScene_Regist(obj);
+	music(obj);
+	
+	while(!Obj_IsDeleted(obj)) {
+		yield;
+	} 
+	
+	CloseScript(GetOwnScriptID());
+}
+
+task music(obj) {
+	LoadSound(BGMboss);
+	let stepCount = ObjEnemyBossScene_GetInfo(obj, INFO_REMAIN_STEP_COUNT);
+	
+	PlayBGM(BGMboss, 0, 487.0);
+}
+
+function wait(n) { loop(n) { yield; } }

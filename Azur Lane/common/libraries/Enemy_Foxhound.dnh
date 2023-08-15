@@ -1,0 +1,48 @@
+// enemy constants
+let hitboxFoxhound = 30;
+
+// angle is angle, spd is initial speed, stopFrames are the amount of frames it takes to halt
+task CreateEnemyFoxhoundA(x, y, spd, angle, stopFrames, stayFrames, difficulty) { 
+    let objEnemy = CreateEnemyFoxhound(x, y, 150, 5);
+    movementUTurnB(objEnemy, spd, angle, stopFrames, stayFrames);
+    alternative (difficulty)
+    // (objEnemy, stopFrames, stayFrames, nwaves, nshots, angleDev, maxSpd, minSpd)
+    case (0) {      // Easy
+        FoxhoundBulletA(objEnemy, stopFrames, stayFrames, 1, 9, 1, 5, 3);
+    }
+    case (1) {      // Normal
+        FoxhoundBulletA(objEnemy, stopFrames, stayFrames, 2, 11, 1, 6, 4);
+    }
+    case (2) {      // Hard
+        FoxhoundBulletA(objEnemy, stopFrames, stayFrames, 4, 15, 1, 8, 5);
+    }
+    case (3) {        // Lunatic
+        FoxhoundBulletA(objEnemy, stopFrames, stayFrames, 5, 21, 0.8, 10, 7);
+    }
+}
+
+/* Base enemy */
+function CreateEnemyFoxhound(x, y, life, points) {
+    return CreateEnemy(x, y, life, imgFoxhound, 1, 1, 45, 75, hitboxFoxhound, points);
+}
+
+/* Bullet tasks */
+// pre: nshots % 2 == 1
+task FoxhoundBulletA(objEnemy, stopFrames, stayFrames, nwaves, nshots, angleDev, maxSpd, minSpd) {
+    let nsubwaves = 3;
+    let nshotsSide = floor(nshots/2);
+    let spdDiff = (maxSpd - minSpd) / nshotsSide;
+    wait(stopFrames);
+    loop(nwaves) {
+        if(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) <= 0){return;}
+        let angleT = GetAngleToPlayer(objEnemy);
+        ascent(j in 0..nsubwaves) { 
+            ascent(i in -nshotsSide..nshotsSide + 1) {
+                let spd = maxSpd - absolute(i)*spdDiff;
+                let angle = angleT + j*360/nsubwaves + i*angleDev;
+                let obj = CreateShotA2(ObjMove_GetX(objEnemy), ObjMove_GetY(objEnemy), spd, angle, -spd/20, minSpd/2, 142, 20);
+            }
+        }
+        wait(stayFrames/nwaves);
+    }
+}

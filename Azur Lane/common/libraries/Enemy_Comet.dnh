@@ -1,0 +1,130 @@
+// enemy constants
+let hitboxComet = 30;
+
+// angle is angle, spd is initial speed, stopFrames are the amount of frames it takes to halt
+task CreateEnemyCometA(x, y, spd, angle, stopFrames, stayFrames, difficulty) { 
+    let objEnemy = CreateEnemyComet(x, y, 500, 10);
+    movementUTurnB(objEnemy, spd, angle, stopFrames, stayFrames);
+    alternative (difficulty)
+    case (0) {      // Easy
+        CometBulletA(objEnemy, 1, 8, 3, 30);
+    }
+    case (1) {      // Normal
+        CometBulletA(objEnemy, 2, 6, 3, 24);
+    }
+    case (2) {      // Hard
+        CometBulletA(objEnemy, 4, 8, 3.5, 12);
+    }
+    case (3) {        // Lunatic
+        CometBulletA(objEnemy, 5, 15, 4, 8);
+    }
+}
+
+task CreateEnemyCometB(x, y, spd, dir, angle, difficulty) { 
+    let objEnemy = CreateEnemyComet(x, y, 120, 3);
+    movementContA(objEnemy, spd, angle);
+    alternative (difficulty)
+    //objEnemy, nshots, spd, dir, angleChange, shootFrames
+    case (0) {      // Easy
+        CometBulletB(objEnemy, 3, 1, dir, 12, 4);
+    }
+    case (1) {      // Normal
+        CometBulletB(objEnemy, 4, 1.5, dir, 10, 4);
+    }
+    case (2) {      // Hard
+        CometBulletB(objEnemy, 4, 2, dir, 9, 3);
+    }
+    case (3) {        // Lunatic
+        CometBulletB(objEnemy, 6, 3, dir, 6, 2);
+    }
+}
+
+task CreateEnemyCometC(x, y, spd, angle, dir, difficulty) {
+    let objEnemy = CreateEnemyComet(x, y, 280, 5);
+    movementContA(objEnemy, spd, angle);
+    alternative (difficulty)
+    //objEnemy, dir
+    case (0) {      // Easy
+        CometBulletC(objEnemy, dir);
+    }
+    case (1) {      // Normal
+        CometBulletC(objEnemy, dir);
+    }
+    case (2) {      // Hard
+        CometBulletC(objEnemy, dir);
+    }
+    case (3) {       // Lunatic
+        CometBulletC(objEnemy, dir);
+    }
+}
+
+/* Base enemy */
+function CreateEnemyComet(x, y, life, points) {
+    return CreateEnemy(x, y, life, imgComet, 1, 1, 69, 74, hitboxComet, points);
+}
+
+/* Bullet tasks */
+// Green star spiral
+task CometBulletA(objEnemy, nwaves, nshots, spd, angleSpace) {
+/*     let nwaves = 4;
+    let nshots = 8;
+    let angleSpace = 12;
+    let spd = 3; */
+    
+    while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) > 0) {
+        let angleT = rand(0, 360);
+        let angleChange = [-angleSpace, angleSpace][rand_int(0, 1)];
+        loop(nshots) { 
+            if(Obj_IsDeleted(objEnemy)) { return; } 
+            ascent(i in 0..nwaves) {
+                let angleS = angleT + i*(360/nwaves);
+                let obj = CreateShotA2(ObjMove_GetX(objEnemy), ObjMove_GetY(objEnemy), spd, angleS, 0, spd, 172, 5);
+                ObjMove_AddPatternA2(obj, 60, NO_CHANGE, NO_CHANGE, -0.1, 0, spd/3);
+            }
+            angleT += angleChange;
+            wait(5);
+        }
+        wait(50);
+    }
+}
+
+// Close range blue stars
+task CometBulletB(objEnemy, nshots, spd, dir, angleChange, shootFrames) {
+/*     let nwaves = 4;
+    let nshots = 8;
+    let angleSpace = 12;
+    let spd = 3; */
+    let angleT = 0;
+    if(dir == 1) { angleChange = -angleChange; }
+    let radius = 20;
+    while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) > 0) {    
+            if(Obj_IsDeleted(objEnemy)) { return; } 
+            ascent(i in 0..nshots) {
+                let angleS = angleT + i*(360/nshots);
+                let obj = CreateShotA2(ObjMove_GetX(objEnemy), ObjMove_GetY(objEnemy), spd, angleS, -spd/40, spd/15, 166, 10);
+                delete(obj, 180);
+            }
+            angleT += angleChange;
+        wait(shootFrames);
+    }
+}
+
+// Slow dense spiral
+task CometBulletC(objEnemy, dir) {
+    let nshots = 1;
+    let spd = 2.8;
+    let waitF = 2;
+    let angleChange = 2.25;
+    let angleRand = 22;
+    let angleT = rand(0, 360);
+    let radius = 30;
+    while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) > 0) {
+        let x = ObjMove_GetX(objEnemy) + radius*cos(angleT);
+        let y = ObjMove_GetY(objEnemy) + radius*sin(angleT);
+        loop(nshots) {
+            let obj = CreateShotA2(x, y, rand(spd/8, spd/5), angleT + rand(-angleRand,angleRand), +spd/400, spd, 669, 4);
+        }
+        angleT += angleChange*dir;
+        wait(waitF);
+    }
+}

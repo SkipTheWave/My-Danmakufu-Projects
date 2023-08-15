@@ -1,0 +1,50 @@
+#TouhouDanmakufu[Plural]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis Stage 3 Midboss 1 - Hard"]
+#Text["Renown (1)"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#BGM["./../music/Illusionary White Travellers.ogg"]
+
+let dir = GetCurrentScriptDirectory();
+
+@Event{
+}
+
+@Initialize{
+	SetPauseScriptPath(GetCurrentScriptDirectory() ~ "../../system/Pause.dnh");
+  SetEndSceneScriptPath(GetCurrentScriptDirectory() ~ "../../system/EndScene.dnh");
+  SetReplaySaveSceneScriptPath(GetCurrentScriptDirectory() ~ "../../system/ReplaySaveScene.dnh");
+	
+	TPlural;
+}
+
+@MainLoop{
+	yield;
+}
+
+@Finalize{
+	//RemoveSound(BGM);
+}
+
+task TPlural {
+	let obj = ObjEnemyBossScene_Create();
+	
+	ObjEnemyBossScene_Add(obj, 0, dir ~ "../singles/Renown Nonspell 1 - Hard.dnh");
+	
+	ObjEnemyBossScene_LoadInThread(obj);
+	ObjEnemyBossScene_Regist(obj);
+	//music(obj);
+	
+	while(!Obj_IsDeleted(obj)) {
+		yield;
+	}
+	
+	CloseScript(GetOwnScriptID());
+}
+
+/*task music(obj) {
+	LoadSound(BGM);
+	PlayBGM(BGM, 11.8, 299.21);
+}*/
+
+function wait(n) { loop(n) { yield; } }

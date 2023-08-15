@@ -1,0 +1,151 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis S2 - Eagle Spellcard 1 - Easy"]
+#Text["Azur Lane - Aurora Noctis[r]Stage 2 Boss[r]\"Royal Arts - Knight's Arsenal\""]
+#BGM["./music/Revolt.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+#include "script/Cutin/Cutin.txt"
+
+let objBoss;
+let objScene = GetEnemyBossSceneObjectID();
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(3800); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(40); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(200000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	StartSpell;
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 100, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "../images/EagleChibi.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 59, 72); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(60);
+	shoot;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	
+	// this part only applies to spellcards, it's the spellcard bonus
+	if(ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SHOOTDOWN_COUNT)
+    +ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SPELL_COUNT) == 0){
+		AddScore(ObjEnemyBossScene_GetInfo(objScene, INFO_SPELL_SCORE));
+	}
+	
+	SetAutoDeleteObject(true);
+	killBossPhase(objBoss);
+	wait(120);
+	CloseScript(GetOwnScriptID());
+}
+
+task StartSpell {
+	let cutin = GetCurrentScriptDirectory ~ "../images/Eagle.png";
+	ObjCutin_SetSpellcardS4("Royal Arts - Knight's Arsenal", cutin, NAZRIN, 250, 60, 10);
+	ObjCutin_LaunchS3(NAZRIN, cutin, "Easy");
+	ObjEnemyBossScene_StartSpell(objScene);
+}
+
+
+
+
+task shoot {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		ascent(i in 0..2) {
+			laser(70 - i*40, -1);
+			laser(110 + i*40, 1);
+			wait(60);
+		}
+		wait(60);
+		ascent(i in 0..4) {
+			amuletA(40 + i*25, 1);
+			wait(5);
+		}
+		wait(40);
+		ascent(i in 0..4) {
+			amuletA(140 - i*25, -1);
+			wait(5);
+		}
+		wait(40);
+	}
+}
+
+task laser(angle, dir) {
+	if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0){return;}
+	PlaySound("Laser2", 50, 0);
+	let obj = CreateCurveLaserA1(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss),
+		5, angle, 40, 15, 1029, 0);
+	ObjMove_AddPatternA2(obj, 0, NO_CHANGE, NO_CHANGE, -0.1, 0, 0);
+	wait(60);
+	
+	let angleT = 90 + dir*45;
+	let nwaves = 4;
+	let narrows = 4;
+	let angleDev = 3;
+	if(ObjEnemy_GetInfo(objBoss, INFO_LIFE || Obj_IsDeleted(obj)) <= 0){return;}
+	PlaySound("Atk3", 60, 20);
+	ascent(k in 0..3) {
+		ascent(j in 0..narrows) {
+			ascent(i in 0..nwaves) {
+				let initSpd = 1.5 + k*0.3 + j*0.05;
+				let accel = j*0.001 + k*0.01;
+				let maxSpd = initSpd + j*0.02 + k*0.1;
+				let angle = angleT + i*360/nwaves + j*angleDev*dir;
+				let objS = CreateShotA2(ObjMove_GetX(obj), ObjMove_GetY(obj), initSpd, 
+							angle, accel, maxSpd, 369, 20);
+			}
+			//angleT += angleDev*dir;
+		}
+		angleT -= angleDev*dir;
+	}
+	Obj_Delete(obj);
+}
+
+task amuletA(angle, dir) {
+	if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0){return;}
+	let nshots = 6;
+	PlaySound("Twinkle1", 40, 0);
+	let obj = CreateShotA2(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 5, angle,
+		-0.1, 0, 112, 0);
+	wait(60);
+	
+	let angleT = GetAngleToPlayer(obj);
+	PlaySound("Twinkle1", 60, 15);
+	ascent(i in 0..nshots) {
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE <= 0 || Obj_IsDeleted(obj))){return;}
+		ascent(j in 0..2) {
+			let objS = CreateShotA1(ObjMove_GetX(obj), ObjMove_GetY(obj), 1.5+j/2, 
+				angleT + i*360/nshots, 99, 15);
+			//ObjMove_SetAngularVelocity(obj, dir*0.5);
+		}
+	}
+	Obj_Delete(obj);
+}
+
+
+

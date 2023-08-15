@@ -1,0 +1,140 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["Chen Hai Spellcard 1 (Normal)"]
+#Text[""]
+#BGM["./../music/06-Shanghai Alice of Meiji 17.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#System["./../../system/Default_System.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+#include "script/Cutin/Cutin.txt"
+
+let objBoss;
+let objScene = GetEnemyBossSceneObjectID();
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(10000); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(50); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(400000); }
+}
+
+@Initialize{
+	SetPauseScriptPath(GetCurrentScriptDirectory() ~ "./../../system/Pause.dnh");
+    SetEndSceneScriptPath(GetCurrentScriptDirectory() ~ "./../../system/EndScene.dnh");
+    SetReplaySaveSceneScriptPath(GetCurrentScriptDirectory() ~ "./../../system/ReplaySaveScene.dnh");
+
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	StartSpell;
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 120, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "../art/Chen_HaiChibi.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 60, 74); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(90);
+	main;
+	wait(900);
+	shoot;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	
+	// this part only applies to spellcards, it's the spellcard bonus
+	if(ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SHOOTDOWN_COUNT)
+    +ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SPELL_COUNT) == 0){
+		AddScore(ObjEnemyBossScene_GetInfo(objScene, INFO_SPELL_SCORE));
+	}
+	
+	SetAutoDeleteObject(true);
+	killBossPhase(objBoss);
+	wait(120);
+	CloseScript(GetOwnScriptID());
+}
+
+task StartSpell {
+	let cutin = GetCurrentScriptDirectory ~ "../art/Chen_Hai_S.png";
+	ObjCutin_SetSpellcardS4("Chen Hai - Cunning Stratagem", cutin, KANAKO, 60, 90, 180);
+	ObjCutin_LaunchS3(KANAKO, cutin, "Normal");
+	ObjEnemyBossScene_StartSpell(objScene);
+}
+
+task main {
+	let nshots = 6;
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		ascent(i in 0..nshots) {
+			butterfly(i*360/nshots);
+		}
+		wait(200);
+		loop(nshots) {
+			butterfly(rand(0,360));
+			wait(60);
+		}
+		wait(360);
+	}
+}
+
+task butterfly(angle) {	
+	PlaySound("Twinkle1", 45, 20);
+	if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+	let obj = CreateShotA1(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 2.8, angle, 294, 10);
+	ObjMove_SetAngularVelocity(obj, rand(-0.6, 0.6));
+	let angleAux = 0;
+	wait(30);
+	while(!Obj_IsDeleted(obj) && ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		let objB = CreateShotA1(ObjMove_GetX(obj), ObjMove_GetY(obj), 0, angle, 24, 20);
+		ObjMove_AddPatternA3(objB, 300, 0, rand(0,360), +0.003, 0, 3, 32);
+		wait(10);
+	}
+}
+
+task boom(obj) {
+	wait(300);
+/* 	let nshots = 1;
+	let delay = 20;
+	ascent(i in 0..nshots) {
+		if(Obj_IsDeleted(obj) || ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+		PlaySound("Twinkle1", 35, delay);
+		CreateShotA2(ObjMove_GetX(obj), ObjMove_GetY(obj), 0, rand(0,360), +0.003, 2, 185, delay);
+	}
+	Obj_Delete(obj); */
+	ObjMove_AddPatternA2(obj, 300, 0, rand(0,360), +0.01, 0, 2);
+}
+
+task shoot {
+	let wavesize = 2;
+	let nshots = 10;
+	let xspdInterval = 0.4;
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		let midXspd = rand(-0.5, 0.5);
+		let leftXspd = midXspd - xspdInterval*nshots/2;
+		PlaySound("Atk3", 50, 20);
+		ascent(j in 0..wavesize) {
+			ascent(i in 0..nshots) {
+				CreateShotB2(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), leftXspd + i*xspdInterval, -3, 
+					0, +0.05, 3, 3, 366, 20);
+			}
+			wait(10);
+		}
+		wait(150);
+	}
+}

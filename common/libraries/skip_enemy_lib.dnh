@@ -1,0 +1,104 @@
+#include "./basic_enemy.dnh"
+
+let imgExplosion = GetCurrentScriptDirectory() ~ "../images/explosions.png";
+
+// function LoadEnemies() {}
+
+// function UnloadEnemies() {}
+
+task drawEnemy(obj, img, img_left, img_top, img_right, img_bottom) {
+    ObjPrim_SetTexture(obj, img);
+    ObjSprite2D_SetSourceRect(obj, img_left, img_top, img_right, img_bottom); 			
+    ObjSprite2D_SetDestCenter(obj);
+}
+
+task enemyTask(objEnemy, hitbox, points) {
+  let Xmin = -hitbox;
+  let Xmax = GetStgFrameWidth + hitbox;
+  let Ymin = -hitbox; 
+  let Ymax = GetStgFrameHeight + hitbox;
+  while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) > 0) {
+      ObjEnemy_SetIntersectionCircleToShot(objEnemy, ObjMove_GetX(objEnemy), ObjMove_GetY(objEnemy), hitbox); 
+      ObjEnemy_SetIntersectionCircleToPlayer(objEnemy, ObjMove_GetX(objEnemy), ObjMove_GetY(objEnemy), hitbox/2);
+
+      if (ObjMove_GetX(objEnemy) < Xmin || ObjMove_GetX(objEnemy) > Xmax || ObjMove_GetY(objEnemy) < Ymin || ObjMove_GetY(objEnemy) > Ymax) {
+        Obj_Delete(objEnemy);
+      }
+      if(ObjMove_GetAngle(objEnemy) > 90 && ObjMove_GetAngle(objEnemy) < 270) {
+        ObjRender_SetAngleY(objEnemy, 180);
+      }
+      yield;
+  }
+  if(!Obj_IsDeleted(objEnemy)) { killEnemy(objEnemy, hitbox, points); }
+}
+
+task killEnemy(obj, hitbox, pointItems) {
+  PlaySound("Atk3", 35, 0);
+	let ex = ObjMove_GetX(obj);
+	let ey = ObjMove_GetY(obj);
+	explode(ex, ey, hitbox*5, 200, 10 + hitbox/2);
+	Obj_SetVisible(obj, false);
+  loop(pointItems) {
+    CreateItemA1(ITEM_POINT_S, rand(ex - hitbox, ex + hitbox), rand(ey - hitbox, ey + hitbox), 1000);
+  }
+	wait(5);
+	Obj_Delete(obj);
+}
+
+/* Generic enemy movement tasks */
+task movementContA(obj, spd, angle) {
+  ObjMove_SetSpeed(obj, spd);
+  ObjMove_SetAngle(obj, angle);
+}
+
+// actual U movement
+task movementUTurnA(obj, spd, angle, straightFrames, wvel) {
+  ObjMove_SetSpeed(obj, spd);
+  ObjMove_SetAngle(obj, angle);
+  wait(straightFrames);
+  ObjMove_SetAngularVelocity(obj, wvel);
+  wait(absolute(180/wvel));
+  ObjMove_SetAngularVelocity(obj, 0);
+}
+
+// stop and turn back
+task movementUTurnB(obj, spd, angle, stopFrames, stayFrames) {
+  let accel = -spd/stopFrames;
+  ObjMove_SetSpeed(obj, spd);
+  ObjMove_SetAngle(obj, angle);
+  ObjMove_SetMaxSpeed(obj, 0);
+  ObjMove_SetAcceleration(obj, -spd/stopFrames);
+  wait(stayFrames);
+  ObjMove_AddPatternA2(obj, 0, 0, -angle, -accel, 0, spd);
+}
+
+// semicircle upwards, random-ish angles
+task movementSemiCircleA(obj, dir, travelFrames) {
+  let angle = rand(-50, -40);
+  let initAngle = angle;
+  if(dir == 1) { initAngle = 180 - angle; }
+  let finalAngle = -angle;
+  if(dir == 1) { finalAngle = 180 + angle; }
+  let angleDiff = finalAngle - initAngle;
+  let radius = absolute(GetCenterX()/cos(initAngle));
+  let travelDistance = (2*pi()*radius)/3;
+  let spd = travelDistance/travelFrames;
+  ObjMove_SetAngle(obj, initAngle);
+  ObjMove_SetAngularVelocity(obj, angleDiff/travelFrames);
+  ObjMove_SetSpeed(obj, spd);
+}
+
+task movementBBA(obj, y, stayFrames) {
+  let count = 0;
+  while(count < stayFrames) {
+    if(ObjMove_GetX(obj) > GetCenterX()) {
+      ObjMove_SetDestAtWeight(obj, GetCenterX() - 60, y, 20, 2);
+    }
+    else {
+      ObjMove_SetDestAtWeight(obj, GetCenterX() + 60, y, 20, 2);
+    }
+    wait(200);
+    count += 200;
+  }
+  ObjMove_SetDestAtWeight(obj, -500, y, 20, 2);
+}

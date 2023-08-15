@@ -1,0 +1,48 @@
+// enemy constants
+let hitboxBBKGV = 80;
+
+// angle is angle, spd is initial speed, frames are the amount of frames it takes to halt
+task CreateEnemyBBKGVA(y, stayFrames, difficulty) { 
+    let objEnemy = CreateEnemyBBKGV(GetStgFrameWidth() + hitboxBBKGV, y, stayFrames*4 + 100, 35);
+    movementBBA(objEnemy, y, stayFrames);
+    alternative (difficulty)
+    // (objEnemy, nshots, spd, angleDiff, wait1, wait2)
+    case (0) {      // Easy
+        BBKGVBulletA(objEnemy, 1, 1, 40, 60, 90);
+    }
+    case (1) {      // Normal
+        BBKGVBulletA(objEnemy, 2, 2, 35, 45, 75);
+    }
+    case (2) {      // Hard
+        BBKGVBulletA(objEnemy, 3, 2.5, 30, 30, 60);
+    }
+    case (3) {        // Lunatic
+        BBKGVBulletA(objEnemy, 4, 2.7, 25, 25, 45);
+    }
+}
+
+/* Base enemy */
+function CreateEnemyBBKGV(x, y, life, points) {
+    return CreateEnemy(x, y, life, imgBBKGV, 1, 10, 1+255, 10+169, hitboxBBKGV, points);
+}
+
+
+/* Bullet tasks */
+// wait2 isn't doing anything cause I don't remember what I wanted it to do...
+task BBKGVBulletA(objEnemy, nshots, spd, angleDiff, wait1, wait2) {     // TODO arguments
+    let angleSpan = 120;
+    wait(120);
+    while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE)) {
+        ascent(i in 0..2) {
+            let x = ObjMove_GetX(objEnemy) - 90 + i*180;
+            let angle = rand(80, 100) - angleSpan/2;
+            ascent(j in 0..nshots) {
+                CreateShotA1(x, ObjMove_GetY(objEnemy) + 20, spd, angle + j*angleSpan/3, 284, 20);
+            }
+            ascent(j in 0..30) {
+                CreateShotA2(x, ObjMove_GetY(objEnemy) + 20, 6, 130 + j*280/30, -0.1, 5, 130, 20);
+            }
+        }
+        wait(wait1);
+    }
+}

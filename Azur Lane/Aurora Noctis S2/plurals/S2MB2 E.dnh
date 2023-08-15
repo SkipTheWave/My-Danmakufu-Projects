@@ -1,0 +1,51 @@
+#TouhouDanmakufu[Plural]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis Stage 2 Midboss 2 - Easy"]
+#Text["Jamaica (2)"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#BGM["../music/Surrounding.ogg"]
+
+let dir = GetCurrentScriptDirectory();
+
+@Event{
+}
+
+@Initialize{
+	SetPauseScriptPath(GetCurrentScriptDirectory() ~ "../../system/Pause.dnh");
+  SetEndSceneScriptPath(GetCurrentScriptDirectory() ~ "../../system/EndScene.dnh");
+  SetReplaySaveSceneScriptPath(GetCurrentScriptDirectory() ~ "../../system/ReplaySaveScene.dnh");
+	
+	TPlural;
+}
+
+@MainLoop{
+	yield;
+}
+
+@Finalize{
+	//RemoveSound(BGM);
+}
+
+task TPlural {
+	let obj = ObjEnemyBossScene_Create();
+	
+	ObjEnemyBossScene_Add(obj, 0, dir ~ "../singles/Jamaica Nonspell 1 - Easy.dnh");
+	ObjEnemyBossScene_Add(obj, 0, dir ~ "../singles/Jamaica Spellcard 1 - Easy.dnh");
+	
+	ObjEnemyBossScene_LoadInThread(obj);
+	ObjEnemyBossScene_Regist(obj);
+	//music(obj);
+	
+	while(!Obj_IsDeleted(obj)) {
+		yield;
+	}
+	
+	CloseScript(GetOwnScriptID());
+}
+
+/*task music(obj) {
+	LoadSound(BGM);
+	PlayBGM(BGM, 11.8, 299.21);
+}*/
+
+function wait(n) { loop(n) { yield; } }

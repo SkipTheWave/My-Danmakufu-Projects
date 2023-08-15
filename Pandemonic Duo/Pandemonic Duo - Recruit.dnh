@@ -1,0 +1,56 @@
+#TouhouDanmakufu[Plural]
+#ScriptVersion[3]
+#Title["Pandemonic Duo - Recruit"]
+#Text["Showdown against Hecatia and Clownpiece. Happy Birthday, Aeris~"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#System["./system/Default_System.txt"]
+
+
+let dir = GetCurrentScriptDirectory();
+let BGMboss = dir ~ "./Music/dBu - Pandemonic Planet.ogg";
+
+@Event{
+}
+
+@Initialize{
+	SetPauseScriptPath(GetCurrentScriptDirectory() ~ "./system/Pause.dnh");
+    SetEndSceneScriptPath(GetCurrentScriptDirectory() ~ "./system/EndScene.dnh");
+    SetReplaySaveSceneScriptPath(GetCurrentScriptDirectory() ~ "./system/ReplaySaveScene.dnh");
+	TPlural;
+}
+
+@MainLoop{
+	yield;
+}
+
+@Finalize{
+	RemoveSound(BGMboss);
+}
+
+task TPlural {
+	let obj = ObjEnemyBossScene_Create();
+	
+	ObjEnemyBossScene_Add(obj, 0, dir ~ "./Pandemonic Nonspell 1 - Recruit.dnh");
+	ObjEnemyBossScene_Add(obj, 0, dir ~ "./Pandemonic Spellcard 1 - Recruit.dnh");
+	ObjEnemyBossScene_Add(obj, 1, dir ~ "./Pandemonic Nonspell 2 - Recruit.dnh");
+	ObjEnemyBossScene_Add(obj, 1, dir ~ "./Pandemonic Spellcard 2 - Recruit.dnh");
+	
+	ObjEnemyBossScene_LoadInThread(obj);
+	ObjEnemyBossScene_Regist(obj);
+	music(obj);
+	
+	while(!Obj_IsDeleted(obj)) {
+		yield;
+	} 
+	
+	CloseScript(GetOwnScriptID());
+}
+
+task music(obj) {
+	LoadSound(BGMboss);
+	let stepCount = ObjEnemyBossScene_GetInfo(obj, INFO_REMAIN_STEP_COUNT);
+	
+	PlayBGM(BGMboss, 0, 369.0);
+}
+
+function wait(n) { loop(n) { yield; } }

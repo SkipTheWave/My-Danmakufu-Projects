@@ -1,0 +1,325 @@
+#TouhouDanmakufu[Stage]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis Stage 2 - Hard"]
+#Text["A foggy, difficult first night has approached; even when surrounded, will you not turn back?"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#System["./../system/Default_System.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+#include "script/Skip Scripts/Azur Lane/common/libraries/azurlane_enemy_lib.dnh"
+
+let dir = GetCurrentScriptDirectory();
+let BGMstage = dir ~ "./music/Surrounding.ogg";
+let BGMboss = dir ~ "./music/Revolt.ogg";
+let stagepart = 0; 
+let counter = 0;
+let bgm;
+let bgm2;
+let diff = 2;
+
+@Event {
+    alternative(GetEventType())
+    case(EV_PAUSE_ENTER){
+        if(stagepart == 0){
+            ObjSound_Stop(bgm);
+        } 
+        if(stagepart == 1){
+            ObjSound_Stop(bgm2);
+        } 
+    }
+    case(EV_PAUSE_LEAVE){
+        if(stagepart == 0){
+            ObjSound_Play(bgm);
+        } 
+        if(stagepart == 1){
+            ObjSound_Play(bgm2);
+        } 
+    }
+    case(EV_USER_STAGE+1){                  //Generic boss minor item drop
+        let arg = GetEventArgument(0); //x, y
+        loop(6) {
+            CreateItemA1(ITEM_POINT, arg[0] + rand(-30, 30), arg[1] + rand(-30, 30), 5000);
+        }
+    }
+    case(EV_USER_STAGE+2){                  //Generic boss major item drop
+        let arg = GetEventArgument(0); //x, y
+        loop(12) {
+            CreateItemA1(ITEM_POINT, arg[0] + rand(-30, 30), arg[1] + rand(-30, 30), 5000);
+        }
+    }
+}
+
+@Initialize {
+    SetPauseScriptPath(GetCurrentScriptDirectory() ~ "../system/Pause.dnh");
+    SetEndSceneScriptPath(GetCurrentScriptDirectory() ~ "../system/EndScene.dnh");
+    SetReplaySaveSceneScriptPath(GetCurrentScriptDirectory() ~ "../system/ReplaySaveScene.dnh");
+    RenderBG;
+	
+	TStage;
+}
+
+@MainLoop {
+    counter++;
+	yield;
+}
+
+@Finalize {
+	RemoveSound(BGMstage);
+	RemoveSound(BGMboss);
+}
+
+task TStage
+{
+    let pathMB1 = dir ~ "./plurals/S2MB1 H.dnh";
+    let pathMB2 = dir ~ "./plurals/S2MB2 H.dnh";
+    let pathB = dir ~ "./plurals/S2B H.dnh"; 
+
+    LoadEnemies();
+	bgm2 = ObjSound_Create();
+    ObjSound_Load(bgm2, BGMboss);
+    StageBGM(bgm2, 2);
+    bgm = ObjSound_Create();
+    ObjSound_Load(bgm, BGMstage);
+    StageBGM(bgm, 1);
+    ObjSound_Play(bgm);
+    counter = 0;
+
+    while(counter < 12*60) {yield;}
+    StagePart1;
+
+    while(counter < 20*60) { yield; }
+    ClearEnemiesBullets();
+    let mb1Script = LoadScriptInThread(pathMB1);
+    StartScript(mb1Script);
+    while(GetCommonData("bossActive", 0) == 1 && GetPlayerState() != STATE_END)
+    {
+        yield;
+    }
+    StagePostMidboss1;
+
+    while(counter < 43*60) { yield; }
+    ClearEnemiesBullets();
+	let mb2Script = LoadScriptInThread(pathMB2);
+	StartScript(mb2Script);
+    while(GetCommonData("bossActive", 0) == 1 && GetPlayerState() != STATE_END)
+    {
+        yield;
+    }
+    StagePostMidboss2;
+    while(counter < 83*60) { yield; }
+    StagePart2;
+    
+    while(counter < 91*60) { yield; }
+    StagePart3;
+
+    while(counter < 99*60) {yield;}
+    StagePart4;
+
+    while(counter < 123.5*60) {yield;}
+    StagePart5;
+
+    while(counter < 145*60) { yield; }
+	// Boss handling starts here
+	stagepart = 1;
+    ObjSound_Stop(bgm);
+	ObjSound_Play(bgm2);
+
+	let bScript = LoadScriptInThread(pathB);
+	StartScript(bScript);
+    while(!IsCloseScript(bScript) && GetPlayerState() != STATE_END)
+    {
+        yield;
+    }
+
+    UnloadEnemies();
+    wait(240);
+    CloseStgScene();
+}
+
+function StageBGM(obj, ID){
+    ObjSound_SetSoundDivision(obj, SOUND_BGM);
+    ObjSound_SetRestartEnable(obj, true);
+    ObjSound_SetLoopEnable(obj, true);
+    ObjSound_SetLoopTime(obj, 0, 300);
+    if(ID == 1){}
+    if(ID == 2){ObjSound_SetLoopTime(obj, 26.3, 187.9);}
+    return obj;
+}
+
+task RenderBG {
+    let currRed = 30;
+    let currGreen = 60;
+    let currBlue = 60;
+    let frontAlpha = 180;
+    let backAlpha = 200;
+    let obj = ObjPrim_Create(OBJ_PRIMITIVE_2D);
+    ObjPrim_SetPrimitiveType(obj, PRIMITIVE_TRIANGLESTRIP);
+    ObjPrim_SetVertexCount(obj, 4);
+    ObjPrim_SetVertexPosition(obj, 0, 0, 0, 0);
+    ObjPrim_SetVertexPosition(obj, 1, 0, 448, 0);
+    ObjPrim_SetVertexPosition(obj, 2, 384, 0, 0);
+    ObjPrim_SetVertexPosition(obj, 3, 384, 448, 0);
+    
+    ObjRender_SetAlpha(obj, backAlpha);
+    ObjRender_SetColor(obj, currRed, currGreen, currBlue);
+    Obj_SetRenderPriorityI(obj, 21);
+    ObjRender_SetBlendType(obj, BLEND_ALPHA);  
+
+    let obj2 = ObjPrim_Create(OBJ_PRIMITIVE_2D);
+    ObjPrim_SetPrimitiveType(obj2, PRIMITIVE_TRIANGLESTRIP);
+    ObjPrim_SetVertexCount(obj2, 4);
+    ObjPrim_SetVertexPosition(obj2, 0, 0, 0, 0);
+    ObjPrim_SetVertexPosition(obj2, 1, 0, 448, 0);
+    ObjPrim_SetVertexPosition(obj2, 2, 384, 0, 0);
+    ObjPrim_SetVertexPosition(obj2, 3, 384, 448, 0);
+    
+    ObjRender_SetAlpha(obj2, frontAlpha);
+    ObjRender_SetColor(obj2, currRed, currGreen, currBlue);
+    Obj_SetRenderPriorityI(obj2, 62);
+    ObjRender_SetBlendType(obj2, BLEND_ALPHA);
+
+    
+/*     ObjRender_SetAlpha(obj, 150);        this is how bg should be by the start of the boss
+    ObjRender_SetColor(obj, 150, 180, 255);     do the math
+    Obj_SetRenderPriorityI(obj, 21);                alphadiff = -50, reddiff = 100, greendiff = 90, bluediff = 175
+    ObjRender_SetBlendType(obj, BLEND_ALPHA); */  
+    let finalRed = 150;
+    let finalGreen = 180;
+    let finalBlue = 255;
+    let finalBackAlpha = 150;
+    let diffRed = finalRed - currRed;
+    let diffGreen = finalGreen - currGreen;
+    let diffBlue = finalBlue - currBlue;
+    let diffBackAlpha = finalBackAlpha - backAlpha;
+    let diffFrontAlpha = frontAlpha;
+    let startFrames = 600;
+    while(counter < startFrames){yield;}
+    let bossFrames = 150*60 - startFrames;
+    while(counter < bossFrames) {
+        currRed += diffRed/bossFrames;
+        currGreen += diffGreen/bossFrames;
+        currBlue += diffBlue/bossFrames;
+        backAlpha += diffBackAlpha/bossFrames;
+        frontAlpha -= diffFrontAlpha/bossFrames;
+        ObjRender_SetColor(obj, currRed, currGreen, currBlue);
+        ObjRender_SetAlpha(obj, backAlpha);
+        ObjRender_SetColor(obj2, currRed, currGreen, currBlue);
+        ObjRender_SetAlpha(obj2, frontAlpha);
+        yield;
+    }
+}
+
+task StagePart1 {
+    wait(30);
+    let n = 18;
+    ascent(i in 0..2) {
+        EnemyWaveDDGC2(n, i, 180, diff);
+    }
+    wait(n*20);
+}
+
+task StagePostMidboss1 {
+    while(counter < 37.5*60) {
+        ascent(i in 0..2) {
+            EnemyWaveDDGC2(1, i, 150, diff);
+        }
+        wait(20);
+    }
+}
+
+
+task StagePostMidboss2 {
+    let dir = 0;
+    while(counter < 78*60) {
+        ascent(i in 0..2) {
+            EnemyWaveDDGB(1, 50, dir, diff);
+            EnemyWaveDDGC2(4, i, 150, diff);     
+        }
+        wait(100);
+    }
+}
+
+task StagePart2 {
+    CreateEnemyFoxhoundA(-hitboxFoxhound, -hitboxFoxhound, 8, 60, 40, 220, diff);
+    CreateEnemyFoxhoundA(GetStgFrameWidth() + hitboxFoxhound, -hitboxFoxhound, 8, 120, 40, 220, diff);
+    wait(120);
+    CreateEnemyFoxhoundA(-hitboxFoxhound, -hitboxFoxhound, 9, 65, 50, 220, diff);
+    CreateEnemyFoxhoundA(GetStgFrameWidth() + hitboxFoxhound, -hitboxFoxhound, 10, 115, 50, 220, diff);
+    wait(120);
+    CreateEnemyFoxhoundA(-hitboxFoxhound, -hitboxFoxhound, 10, 70, 60, 220, diff);
+    CreateEnemyFoxhoundA(GetStgFrameWidth() + hitboxFoxhound, -hitboxFoxhound, 10, 110, 60, 220, diff);
+}
+
+task StagePart3 {
+    ascent(i in 0..2) {
+        //num, delay, x, spd, dir, difficulty
+        EnemyWaveCometB(4, 90, 25 + i*(GetStgFrameWidth() - 2*25), 3.5, i, diff);
+    }
+    wait(150);
+    CreateEnemyFoxhoundA(GetCenterX() + 60, -hitboxFoxhound, 6, 90, 30, 180, diff);
+    wait(60);
+    CreateEnemyFoxhoundA(GetCenterX() - 60, -hitboxFoxhound, 6, 90, 30, 180, diff);
+    wait(60);
+    CreateEnemyFoxhoundA(GetCenterX(), -hitboxFoxhound, 6, 90, 30, 180, diff);
+}
+
+task StagePart4 {   
+    StagePart4Aux;
+    wait(90);
+    CreateEnemyFoxhoundA(GetCenterX(), -hitboxFoxhound, 8, 90, 30, 200, diff);
+    wait(90);
+    CreateEnemyFoxhoundA(GetCenterX() - 80, -hitboxFoxhound, 8, 80, 30, 200, diff);
+    wait(90);
+    CreateEnemyFoxhoundA(-hitboxFoxhound, -hitboxFoxhound, 8, 50, 40, 200, diff);
+    wait(90);
+    CreateEnemyFoxhoundA(GetCenterX() + 100, -hitboxFoxhound, 8, 100, 30, 200, diff);
+    wait(90);
+    CreateEnemyFoxhoundA(GetCenterX() + 30, -hitboxFoxhound, 8, 95, 30, 200, diff);
+    wait(90);
+    CreateEnemyFoxhoundA(GetStgFrameWidth() + hitboxFoxhound, -hitboxFoxhound, 8, 130, 40, 200, diff);
+    wait(120);  
+    ascent(i in -3..4) {
+        CreateEnemyFoxhoundA(GetCenterX() + i*50, -hitboxFoxhound, 8, 90, 30, 200, diff);
+        wait(40);
+    }      
+    wait(120);
+    ascent(i in -3..4) {
+        CreateEnemyFoxhoundA(GetCenterX() - i*50, -hitboxFoxhound, 8, 90, 30, 200, diff);
+        wait(40);
+    }      
+}
+
+task StagePart4Aux {
+    let nWaveDDs = 6;
+    while(counter < 122*60) {
+        ascent(i in 0..2) {
+            EnemyWaveDDGC2(nWaveDDs, i, 180, diff);
+        }
+        wait(200);
+        ascent(i in 0..2) {
+             //num, delay, x, spd, dir, difficulty
+            EnemyWaveCometB(2, 60, 25 + i*(GetStgFrameWidth() - 2*25), 4, i, diff);
+        }
+        wait(150);
+    }
+}
+
+task StagePart5 {
+    wait(60);
+    ascent(i in 0..2) {
+        let x = GetCenterX() - 50 + i*2*50;
+        CreateEnemyFoxhoundA(x, -hitboxFoxhound, 4, 90, 50, 220, diff);
+    }
+    loop(2) {
+        wait(150);
+        ascent(i in 0..2) {
+            let x = GetCenterX() - 100 + i*2*100;
+            CreateEnemyFoxhoundA(x, -hitboxFoxhound, 4, 90, 50, 220, diff);
+        }
+        wait(150);
+        ascent(i in 0..3) {
+            let x = GetCenterX() - 150 + i*150;
+            CreateEnemyFoxhoundA(x, -hitboxFoxhound, 4, 90, 50, 220, diff);
+        } 
+    }  
+}

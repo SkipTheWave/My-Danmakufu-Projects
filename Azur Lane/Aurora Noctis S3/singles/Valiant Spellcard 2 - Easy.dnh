@@ -1,0 +1,138 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis S3 - Valiant Spellcard 2 - Easy"]
+#Text["Azur Lane - Aurora Noctis[r]Stage 3 Boss[r]\"Valiant - Forward!\""]
+#BGM["./music/Takt of Heroes.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+#include "script/Cutin/Cutin.txt"
+
+let objBoss;
+let objScene = GetEnemyBossSceneObjectID();
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(7000); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(45); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(250000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	StartSpell;
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 80, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "../images/ValiantChibi.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 74, 74); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(90);
+	main;
+	wait(90);
+	movement;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	
+	// this part only applies to spellcards, it's the spellcard bonus
+	if(ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SHOOTDOWN_COUNT)
+    +ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SPELL_COUNT) == 0){
+		AddScore(ObjEnemyBossScene_GetInfo(objScene, INFO_SPELL_SCORE));
+	}
+	
+	SetAutoDeleteObject(true);
+	killBossPhase(objBoss);
+	wait(120);
+	CloseScript(GetOwnScriptID());
+}
+
+task StartSpell {
+	let cutin = GetCurrentScriptDirectory ~ "../images/Valiant.png";
+	ObjCutin_SetSpellcardS4("Valiant - Forward!", cutin, NAZRIN, 220, 110, 110);
+	ObjCutin_LaunchS3(NAZRIN, cutin, "Normal");
+	ObjEnemyBossScene_StartSpell(objScene);
+}
+
+
+
+task main {
+	shootA(objBoss, 270);
+	shootA(objBoss, 210);
+	shootA(objBoss, 150);
+	shootA(objBoss, 330);
+	shootA(objBoss, 30);
+	shootB;
+}
+task shootA(obj, angle) {
+	let count = 0;
+	let angleA = angle;
+	let angleB = angle;
+	while(!Obj_IsDeleted(obj)) {
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+		CreateShotA1(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 4, angleA, 59, 0);
+		CreateShotA1(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 4, angleB, 59, 0);
+		angleA = angle + 20*sin(count);
+		angleB = angle - 20*sin(count);
+		count += 8;
+		wait(2);
+	}
+}
+
+task shootB {
+	let angleT = 0;
+	while(!Obj_IsDeleted(objBoss)) {
+		let nWshots = 24;
+		loop(nWshots) {
+			if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+			PlaySound("Atk3", 40, 15);
+			CreateShotA1(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 1, angleT, 32, 15);
+			angleT += 360/nWshots;
+		}
+		ascent(j in 0..1) {
+			let angleDev = 40;
+			let angleP = GetAngleToPlayer(objBoss) + j*angleDev;
+			let obj1 = CreateShotA1(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 2.8, angleP, 327, 15);
+			ascent(i in 0..3) {
+				let obj2 = CreateShotA1(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 2.4 - i*0.25, angleP, 277, 15);
+				if(j==0) {
+					Obj_SetRenderPriorityI(obj2, Obj_GetRenderPriorityI(obj2) + 4);
+				}
+			}
+			if(j==0) {
+				Obj_SetRenderPriorityI(obj1, Obj_GetRenderPriorityI(obj1) + 4);
+			}
+		}
+		angleT += 4;
+		wait(80);
+	}
+}
+
+task movement {
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), GetStgFrameHeight() - 150, 30*60);
+}
+
+
+
+
+
+

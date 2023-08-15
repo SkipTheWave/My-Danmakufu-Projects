@@ -1,0 +1,97 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["Elementalist Non-Spell 1"]
+#Text[""]
+#BGM["./Pathway.mp3"]
+#include "script/default_system/Default_ShotConst.txt"
+
+let objBoss;
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(4000); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(30); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(25000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 120, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "elementalist(overmind)-sprite.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 75, 114); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(60);
+	fire;
+	frost;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	Obj_Delete(objBoss);
+	DeleteShotAll(TYPE_ALL, TYPE_IMMEDIATE);
+	SetAutoDeleteObject(true);
+	CloseScript(GetOwnScriptID());
+}
+
+function GetCenterX(){ return GetStgFrameWidth() / 2; }		// 384 / 2
+function GetCenterY(){ return GetStgFrameHeight() / 2; }	// 448 / 2
+function wait(n){ loop(n){yield;} }
+
+task fire {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		let angleP = GetAngleToPlayer(objBoss);
+		let bossX = ObjMove_GetX(objBoss);
+		let bossY = ObjMove_GetY(objBoss);
+		let obj = CreateShotA2(bossX, bossY, 0, angleP, +0.02, 2.5, DS_BALL_L_ORANGE, 30);
+		
+		wait(30);
+		while (!Obj_IsDeleted(obj)){
+			let angleR = rand(0, 359);
+			CreateShotA1(ObjMove_GetX(obj), ObjMove_GetY(obj), 0.75, angleR, DS_LIGHT_RED, 5); 
+			CreateShotA1(ObjMove_GetX(obj), ObjMove_GetY(obj), 0.75, angleR-180, DS_LIGHT_ORANGE, 25); 
+			wait(10);
+		}
+		wait(15);
+	}
+}
+
+task frost {		// REDO REDO REDO
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		let angleP = GetAngleToPlayer(objBoss);
+		let bossX = ObjMove_GetX(objBoss);
+		let bossY = ObjMove_GetY(objBoss);
+		
+		wait(60);
+		let obj = CreateShotA2(bossX, bossY, 0, angleP, +0.02, 2.5, DS_BALL_L_SKY, 30);
+		
+		wait(30);
+		while (!Obj_IsDeleted(obj)){
+			let angleR = rand(0, 359);
+			CreateShotA1(ObjMove_GetX(obj), ObjMove_GetY(obj), 0.75, angleR, DS_LIGHT_BLUE, 5); 
+			CreateShotA1(ObjMove_GetX(obj), ObjMove_GetY(obj), 0.75, angleR-180, DS_LIGHT_SKY, 25); 
+			wait(10);
+		}
+		wait(15);
+	}
+}
+

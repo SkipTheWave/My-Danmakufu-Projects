@@ -1,0 +1,203 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis S2 - Jamaica Spellcard - Hard"]
+#Text["Azur Lane - Aurora Noctis[r]Stage 2 Miniboss[r]\"Sealed Arts - Incineration Eye\""]
+#BGM["../music/Surrounding.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+#include "script/Cutin/Cutin.txt"
+
+let objBoss;
+let objScene = GetEnemyBossSceneObjectID();
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(4200); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(22); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(200000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	StartSpell;
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 180, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "../images/JamaicaChibi.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 67, 74); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(60);
+	eye;
+	wait(30);
+	fire;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	
+	// this part only applies to spellcards, it's the spellcard bonus
+	if(ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SHOOTDOWN_COUNT)
+    +ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SPELL_COUNT) == 0){
+		AddScore(ObjEnemyBossScene_GetInfo(objScene, INFO_SPELL_SCORE));
+	}
+	
+	SetAutoDeleteObject(true);
+	killBoss(objBoss);
+	wait(180);
+	CloseScript(GetOwnScriptID());
+}
+
+task StartSpell {
+	let cutin = GetCurrentScriptDirectory ~ "../images/Jamaica.png";
+	ObjCutin_SetSpellcardS4("Sealed Arts - Incineration Eye", cutin, NAZRIN, 250, 60, 10);
+	ObjCutin_LaunchS3(NAZRIN, cutin, "Hard");
+	ObjEnemyBossScene_StartSpell(objScene);
+}
+
+
+
+
+task eye {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		let bossX = ObjMove_GetX(objBoss);
+		let bossY = ObjMove_GetY(objBoss);
+		let graphic = [702, 707, 708][rand_int(0, 2)];	
+		
+		CreateShotB2(bossX, bossY, rand(0.1, 1), -rand(0.1, 1), rand(0.01, 0.2), 
+		-rand(0.01, 0.2), rand(0.5, 3), rand(-1, -5), graphic, 0);
+		wait(2);
+	}
+}
+
+task eyeB {
+	let angleP = GetAngleToPlayer(objBoss);
+	let bossX = ObjMove_GetX(objBoss);
+	let bossY = ObjMove_GetY(objBoss);
+		
+	let n = 30;
+	ascent(i in 0..n) {
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0){return;}
+		CreateShotA1(bossX, bossY, 1.5 + (i%2)/2, angleP, 823, 0);
+		angleP += 360/n;
+	}
+}
+
+task fire {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		laser(70, -1.4, 90);
+		wait(60);
+		eyeB;
+		wait(120);
+		laser(110, 1.6, 120);
+		wait(60);
+		eyeB;
+		wait(160);
+		laser(0, -1.2, 240);
+		wait(60);
+		eyeB;
+		wait(180);
+		laser(180, 1.2, 250);
+		wait(60);
+		eyeB;
+		wait(180);
+	}
+}
+
+task laser(angle, dir, duration) {
+	if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0){return;}
+	let bossX = ObjMove_GetX(objBoss);
+	let bossY = ObjMove_GetY(objBoss);	
+	PlaySound("Charge", 80, 0);
+	let obj = CreateStraightLaserA1(bossX, bossY, angle, 512, 40, duration, 1003, 100);
+	wait(100);
+	if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0){return;}
+	PlaySound("Laser1", 70, 0);
+	laserBurn(obj);
+	loop(duration-20) {
+		ObjStLaser_SetAngle(obj, angle);
+		angle += dir;
+		if(angle > 360) { angle -= 360; }
+		if(angle < 0) { angle += 360; }
+		yield;
+	}
+}
+
+// field coordinates -> 384, 448
+// boss coordinates -> 192, 180
+// boss distance to left/right borders -> 192
+// boss distance to upper border -> 180
+// boss distance to lower border -> 268
+task laserBurn(obj) {
+	while(!Obj_IsDeleted(obj) && ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		
+		let bossX = ObjMove_GetX(objBoss);
+		let bossY = ObjMove_GetY(objBoss);
+		let fireX = 0;
+		let fireY = 0;
+		let angleL = ObjStLaser_GetAngle(obj);
+		let angleT = angleL % 90;
+		
+		// angle at lower corners -> atan(268/192)
+		// angle at upper corners -> atan(180/192)
+		// if we divide the field into 8 sections with the boss as a "center":
+		if(angleL >= 0 && angleL < atan(268/192)) {	// section 1	
+			fireX = GetStgFrameWidth(); 
+			fireY = bossY + tan(angleT)*bossX;
+		}
+		if(angleL >= atan(268/192) && angleL < 90) {	// section 2
+			fireX = bossX + 268/tan(angleT);
+			fireY = GetStgFrameHeight();
+		}
+		if(angleL >= 90 && angleL < 90 + atan(192/268)) {	// section 3
+			fireX = bossX - tan(angleT)*268;
+			fireY = GetStgFrameHeight();
+		}
+		if(angleL >= 90 + atan(192/268) && angleL < 180) {	// section 4
+			fireX = 0;
+			fireY = bossY + 192/tan(angleT);
+		}
+		if(angleL >= 180 && angleL < 180 + atan(bossY/bossX)) {	// section 5
+			fireX = 0;
+			fireY = 180 - tan(angleT)*192;
+		}
+		if(angleL >= 180 + atan(bossY/bossX) && angleL < 270) {	// section 6
+			fireX = 192 - 180/tan(angleT);
+			fireY = 0;
+		}
+		if(angleL >= 270 && angleL < 270 + atan(192/180)) {	// section 7
+			fireX = bossX + tan(angleT)*180;
+			fireY = 00;
+		}
+		if(angleL >= 270 + atan(192/180) && angleL < 360) {											// section 8
+			fireX = GetStgFrameWidth();
+			fireY = 180 - 192/tan(angleT);
+		}
+		
+		CreateShotA1(fireX, fireY, 2, angleL + 180 + rand(-40, 40), 19, 10);
+		CreateShotA1(fireX, fireY, 1, angleL + 180 + rand(-40, 40), 31, 10);
+		PlaySound("Twinkle1", 50, 10);
+		wait(6);
+	}
+}
+
+
+

@@ -1,0 +1,152 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["Cutie Maelstrom - Nowaki Spellcard 1"]
+#Text["\"Lucky(?) Ship - Evasion\""]
+#BGM["./Music/The Upcoming Battle - Armaros.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#System["./../system/Default_System.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+#include "script/Cutin/Cutin.txt"
+
+let objBoss;
+let objScene = GetEnemyBossSceneObjectID();
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(4500); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(40); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(300000); }
+}
+
+@Initialize{
+	SetPauseScriptPath(GetCurrentScriptDirectory() ~ "./../system/Pause.dnh");
+    SetEndSceneScriptPath(GetCurrentScriptDirectory() ~ "./../system/EndScene.dnh");
+    SetReplaySaveSceneScriptPath(GetCurrentScriptDirectory() ~ "./../system/ReplaySaveScene.dnh");
+
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	StartSpell;
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), GetCenterY() - 60, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "Images/NowakiChibi.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 54, 72);  			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(60);
+	lines();
+	contMov();
+	wait(180);
+	circles();
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	
+	// this part only applies to spellcards, it's the spellcard bonus
+	if(ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SHOOTDOWN_COUNT)
+    +ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SPELL_COUNT) == 0){
+		AddScore(ObjEnemyBossScene_GetInfo(objScene, INFO_SPELL_SCORE));
+	}
+	
+	SetAutoDeleteObject(true);
+	killBoss(objBoss);
+	wait(180);
+	CloseScript(GetOwnScriptID());
+}
+
+task StartSpell {
+	let cutin = GetCurrentScriptDirectory ~ "../images/Nowaki.png";
+	ObjCutin_SetSpellcardS4("Lucky(?) Ship - Evasion", cutin, NAZRIN, 180, 180, 255);
+	ObjCutin_LaunchS3(NAZRIN, cutin, "Normal");
+	let cutin2 = GetCurrentScriptDirectory ~ "../images/Forbin.png";
+	ObjCutin_SetSpellcardS4("Lucky(?) Ship - Attack", cutin2, NAZRIN, 180, 180, 255);
+	ObjCutin_LaunchS3(NAZRIN, cutin, "Normal");
+	ObjEnemyBossScene_StartSpell(objScene);
+}
+
+
+
+
+task circles() {
+	while(!Obj_IsDeleted(objBoss)) {
+		let numShots = 14;
+		let angleS = 360/numShots;
+		let graphic = [69, 75, 78, 79, 80][rand_int(0, 4)];
+		
+		PlaySound("Atk3", 20, 10);
+		ascent(i in 0..numShots+1) {
+			ascent(j in 0..2) {
+				CreateShotA1(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 2.5 - j, 
+					i*angleS + rand(0, angleS), graphic, 10);
+			}
+		}
+		wait(40);
+	}
+}
+
+task lines() {
+	let numShots = 24;
+	let x1 = GetCenterX() - 150;
+	let x2 = GetCenterY() + 120;
+	let xShift = (x2 - x1)/numShots;
+	while(!Obj_IsDeleted(objBoss)) {
+		line(numShots, x1, xShift, GetCenterY() + 40);
+		line(numShots, x2, -xShift, GetCenterY() - 140);
+		wait(80);
+		line(numShots, x2, -xShift, GetCenterY() + 70);
+		line(numShots, x1, xShift, GetCenterY() - 110);
+		wait(300);
+	}
+}
+
+task line(numShots, xStart, xShift, y) {
+	ascent(i in 0..numShots+1) {
+			if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+			let obj = CreateShotA1(xStart + i*xShift, y, 0, 90, 102, 20); 
+			amuletMov(obj);
+			wait(2);
+		}
+}
+
+task amuletMov(obj) {
+	wait(90);
+	if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+	PlaySound("Twinkle1", 40, 0);
+	let angleP = atan2(GetPlayerY() - ObjMove_GetY(obj), GetPlayerX() - ObjMove_GetX(obj));
+	ObjMove_AddPatternA3(obj, 0, 0, angleP, 0, 0, 0, 103);
+	ObjMove_AddPatternA3(obj, 60, 0, NO_CHANGE, +0.15, 0, 5, NO_CHANGE);
+}
+
+task moveX(x) {
+	ObjMove_SetDestAtWeight(objBoss, x, GetCenterY() - 60, 45, 3);
+}
+
+task contMov() {
+	while(!Obj_IsDeleted(objBoss)) {
+		moveX(rand(GetCenterX() + 20, GetCenterX() + 140));
+		wait(100);
+		moveX(rand(GetCenterX() + 140, GetCenterX() + 20));
+		wait(100);
+	}
+}
+
+
+

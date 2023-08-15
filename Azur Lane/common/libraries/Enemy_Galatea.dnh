@@ -1,0 +1,151 @@
+// enemy constants
+let hitboxGalatea = 30;
+
+task CreateEnemyGalateaA(x, y, spd, angle, difficulty) { 
+    let objEnemy = CreateEnemyGalatea(x, y, 360, 12);
+    movementContA(objEnemy, spd, angle);
+    alternative (difficulty)
+    // (objEnemy, interval, nshots, speed)
+    case (0) {      // Easy
+        GalateaBulletA(objEnemy, 180, 14, 1.1);
+    }
+    case (1) {      // Normal
+        GalateaBulletA(objEnemy, 160, 20, 1.3);
+    }
+    case (2) {      // Hard
+        GalateaBulletA(objEnemy, 100, 60, 1.6);
+    }
+    case (3) {        // Lunatic
+        GalateaBulletA(objEnemy, 90, 75, 1.8);
+    }
+}
+
+task CreateEnemyGalateaA2(x, y, spd, angle, difficulty) { 
+    let objEnemy = CreateEnemyGalatea(x, y, 180, 8);
+    movementContA(objEnemy, spd, angle);
+    alternative (difficulty)
+    // (objEnemy, interval, nshots, speed)
+    case (0) {      // Easy
+        GalateaBulletA2(objEnemy, 60, 13, 2.5);
+    }
+    case (1) {      // Normal
+        GalateaBulletA2(objEnemy, 50, 21, 3.5);
+    }
+    case (2) {      // Hard
+        GalateaBulletA2(objEnemy, 50, 29, 4);
+    }
+    case (3) {        // Lunatic
+        GalateaBulletA2(objEnemy, 30, 41, 4.5);
+    }
+}
+
+task CreateEnemyGalateaB(x, y, spd, angle, stopFrames, stayFrames, difficulty) { 
+    let objEnemy = CreateEnemyGalatea(x, y, 250, 11);
+    movementUTurnB(objEnemy, spd, angle, stopFrames, stayFrames);
+    alternative (difficulty)
+    // (objEnemy, interval, wavesize, speed)
+    case (0) {      // Easy
+        GalateaBulletB(objEnemy, 5, 1, 1.5);
+    }
+    case (1) {      // Normal
+        GalateaBulletB(objEnemy, 4, 2, 2);
+    }
+    case (2) {      // Hard
+        GalateaBulletB(objEnemy, 3, 3, 1.5);
+    }
+    case (3) {       // Lunatic
+        GalateaBulletB(objEnemy, 1, 5, 3);
+    }
+}
+
+/* Base enemy */
+function CreateEnemyGalatea(x, y, life, points) {
+    //return CreateEnemy(x, y, life, imgGalatea, 1, 1, 58, 83, hitboxGalatea, points);
+    return CreateEnemy(x, y, life, imgGalatea, 1, 1, 54, 70, hitboxGalatea, points);
+}
+
+/* Bullet tasks */
+task GalateaBulletA(objEnemy, interval, nshots, speed) {
+    wait(80);
+    let graphic = 0;
+    while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) > 0) {
+        //PlaySound("Twinkle1", 40, 0);
+        ascent(i in 0..nshots) {
+            graphic = 21;
+            if(i % round(nshots/2) == 0) { graphic = 375; }
+            let angle = GetAngleToPlayer(objEnemy) + i*360/nshots;
+            CreateShotA2(ObjMove_GetX(objEnemy), ObjMove_GetY(objEnemy), speed*2, angle, -speed/50, speed, graphic, 0);
+        }
+        wait(interval);
+    }
+}
+
+task GalateaBulletA2(objEnemy, interval, nshots, speed) {
+    wait(80);
+    while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) > 0) {
+        //PlaySound("Twinkle1", 50, 0);
+        ascent(i in 0..nshots) {
+            let graphic = 340;
+            //if(i % 2 == 0) { graphic = 236; }
+            if(i == 0) { graphic = 237; }
+            let angle = GetAngleToPlayer(objEnemy) + i*360/nshots;
+            let obj = CreateShotA2(ObjMove_GetX(objEnemy), ObjMove_GetY(objEnemy), speed/20, angle, speed/80, speed, graphic, 0);
+            if(i == 0) { Obj_SetRenderPriorityI(obj, Obj_GetRenderPriorityI(obj)+1)}
+        }
+        wait(interval);
+    }
+}
+
+task GalateaBulletB(objEnemy, interval, wavesize, speed) {
+    wait(90);
+    GalateaBulletB1(objEnemy, interval, wavesize, speed);
+    GalateaBulletB2(objEnemy, interval, speed);
+
+}
+
+task GalateaBulletB1(objEnemy, interval, wavesize, speed) {
+    let angle = 0;
+    let nwaves = 2;
+    while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) > 0) {
+        ascent(i in 0..nwaves) {
+            ascent(j in 0..wavesize) {
+                if(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) <= 0) {return;}
+                PlaySound("Twinkle1", 30, 10);
+                let angleAux = angle + i*360/nwaves + j*4;
+                let r = 20;
+                let x = ObjMove_GetX(objEnemy) + r*cos(angleAux);
+                let y = ObjMove_GetY(objEnemy) + r*sin(angleAux);
+                let accel = speed/90;
+                let maxSpd = speed;
+                let obj = CreateShotA1(x, y, speed, angleAux, 5, 5);
+                GalateaBulletB1Shift(obj, 1.5*speed);
+            }
+        }
+        angle += 2*interval;
+        wait(interval);
+    }
+}
+
+task GalateaBulletB1Shift(obj, speed) {
+    wait(50);
+    let angleShift = rand(-20, 20);
+    ObjMove_SetAngle(obj, ObjMove_GetAngle(obj) + angleShift);
+    ObjMove_AddPatternA2(obj, 0, NO_CHANGE, NO_CHANGE, 0.05, 0, speed);
+}
+
+task GalateaBulletB2(objEnemy, interval, speed) {
+    let r = 40;
+    while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) > 0) {
+        loop(2) {
+            let angle = rand(0, 360);
+            let x = ObjMove_GetX(objEnemy) + r*cos(angle);
+            let y = ObjMove_GetY(objEnemy) + r*sin(angle);
+            let accel = speed/90;
+            let maxSpd = 2*speed;
+            let graphic = [9, 16][rand_int(0, 1)];
+            let obj = CreateShotA2(x, y, 0, angle, accel, maxSpd, graphic, 5);
+        }
+        wait(interval);
+        r--;
+    }
+}

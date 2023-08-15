@@ -1,0 +1,17 @@
+
+function CreateEnemy(x, y, life, img, img_left, img_top, img_right, img_bottom, hitbox, points) {
+	let obj = CreateBasicEnemy(x, y, life);
+    drawEnemy(obj, img, img_left, img_top, img_right, img_bottom);
+	enemyTask(obj, hitbox, points);
+	return obj;
+}
+
+function CreateBasicEnemy(x, y, life) {
+    let objEnemy;
+    objEnemy = ObjEnemy_Create(OBJ_ENEMY);
+    ObjEnemy_Regist(objEnemy);
+    ObjEnemy_SetLife(objEnemy, life);
+    ObjEnemy_SetDamageRate(objEnemy, 100, 100);
+    ObjMove_SetPosition(objEnemy, x, y);
+    return objEnemy;
+}

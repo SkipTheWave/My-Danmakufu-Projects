@@ -1,0 +1,196 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis S3 - Valiant Spellcard 3 - Normal"]
+#Text["Azur Lane - Aurora Noctis[r]Stage 3 Boss[r]\"Valiant - Takt of Heroes\""]
+#BGM["./music/Takt of Heroes.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+#include "script/Cutin/Cutin.txt"
+
+let objBoss;
+let objScene = GetEnemyBossSceneObjectID();
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(8500); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(60); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(300000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	StartSpell;
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 120, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "../images/ValiantChibi.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 74, 74); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(60);
+	main;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	
+	// this part only applies to spellcards, it's the spellcard bonus
+	if(ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SHOOTDOWN_COUNT)
+    +ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SPELL_COUNT) == 0){
+		AddScore(ObjEnemyBossScene_GetInfo(objScene, INFO_SPELL_SCORE));
+	}
+	
+	SetAutoDeleteObject(true);
+	killBoss(objBoss);
+	wait(180);
+	CloseScript(GetOwnScriptID());
+}
+
+task StartSpell {
+	let cutin = GetCurrentScriptDirectory ~ "../images/Valiant.png";
+	ObjCutin_SetSpellcardS4("Valiant - Takt of Heroes", cutin, NAZRIN, 220, 110, 110);
+	ObjCutin_LaunchS3(NAZRIN, cutin, "Normal");
+	ObjEnemyBossScene_StartSpell(objScene);
+}
+
+task main {
+	white;
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		ascent(i in 0..6) {
+			aquaBall(i*60, 4);
+			wait(15);
+		}
+		wait(150);
+		ascent(i in 0..6) {
+			redBall(-i*60, 4);
+			wait(15);
+		}
+		wait(180);
+		ascent(i in 1..3) {
+			aquaBall(50, 2 + i*2);
+			aquaBall(130, 2 + i*2);
+		}
+		wait(120);
+		ascent(i in 1..3) {
+			aquaBall(70, 2 + i*2);
+			aquaBall(110, 2 + i*2);
+		}
+		wait(120);
+		ascent(i in 1..3) {
+			redBall(40, 2 + i*2);
+			redBall(140, 2 + i*2);
+		}
+		wait(200);
+		ascent(i in 1..2) {
+			aquaBall(0, 3.5 + i);
+			aquaBall(45, 3.5 + i);
+			aquaBall(90, 3.5 + i);
+			aquaBall(135, 3.5 + i);
+			aquaBall(180, 3.5 + i);
+		}
+		wait(60);
+		ascent(i in 0..5) {
+			redBall(i*45, 3);
+		}
+		wait(180);
+		ascent(i in 0..5) {
+			redBall(50 + i*100/5, 5);
+			wait(20);
+		}
+		wait(60);
+	}
+}
+
+task ball(ballAngle, shotAngle, graphic, knifeGraphic, speed) {
+	if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+	let bossX = ObjMove_GetX(objBoss);
+	let bossY = ObjMove_GetY(objBoss);
+	
+	PlaySound("Atk3", 30, 20);
+	let obj = CreateShotA2(bossX, bossY, speed, ballAngle, -0.07, 0, graphic, 20);
+	knives(obj, shotAngle, knifeGraphic);
+}
+
+task knives(obj, angle, knifeGraphic) {
+	wait(150);
+	if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+	PlaySound("Atk4", 60, 20);
+	ascent(i in 0..4) {
+		ascent(j in 0..6) {
+			CreateShotA2(ObjMove_GetX(obj), ObjMove_GetY(obj), 2.5 + j, angle + i*90,
+				-0.1 - j/40, 1 + j/2, knifeGraphic, 20);
+		}
+	}
+	Obj_Delete(obj);
+}
+
+task redBall(angle, speed) {
+	if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+	let bossX = ObjMove_GetX(objBoss);
+	let bossY = ObjMove_GetY(objBoss);
+	
+	PlaySound("Atk3", 30, 20);
+	let obj = CreateShotA2(bossX, bossY, speed, angle, -0.07, 0, 323, 20);
+	redKnives(obj);
+}
+
+task redKnives(obj) {
+	wait(150);
+	if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+	let dir = atan2(GetPlayerY-ObjMove_GetY(obj),GetPlayerX-ObjMove_GetX(obj));
+	
+	PlaySound("Atk4", 60, 20);
+	ascent(i in 0..4) {
+		ascent(j in 0..6) {
+			CreateShotA2(ObjMove_GetX(obj), ObjMove_GetY(obj), 2 + j, 
+				dir + i*90, -0.1 - j/40, 1.5 + j/2, 300, 20); 
+		}
+	}
+	Obj_Delete(obj);
+}
+
+task aquaBall(angle, speed) {
+	ball(angle, 0, 328, 303, speed);
+}
+
+/*task yellowBall(angle, speed) {
+	ball(angle, 45, 326, 305, speed);
+}*/
+
+task white {
+	let angleT = 0;
+	let nshots = 20;
+	while(!Obj_IsDeleted(objBoss)) {
+		loop(nshots) {
+			if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+			CreateShotA1(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 1, angleT, 32, 15);
+			angleT += 360/nshots;
+		}
+		angleT += 360/nshots/2;
+		wait(120);
+	}
+}
+
+
+
+
+
+

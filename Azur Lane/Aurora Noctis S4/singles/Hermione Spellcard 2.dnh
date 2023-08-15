@@ -1,0 +1,200 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis S4 - Hermione Spellcard 2"]
+#Text["Azur Lane - Aurora Noctis[r]Stage 4 Boss[r]\"Royal Maid - Bombarda Geminio\""]
+#BGM["./../music/Battlefield.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#System["./../../system/Default_System.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+#include "script/Cutin/Cutin.txt"
+
+let objBoss;
+let objScene = GetEnemyBossSceneObjectID();
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(5500); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(45); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(300000); }
+}
+
+@Initialize{
+	SetPauseScriptPath(GetCurrentScriptDirectory() ~ "./../../system/Pause.dnh");
+    SetEndSceneScriptPath(GetCurrentScriptDirectory() ~ "./../../system/EndScene.dnh");
+    SetReplaySaveSceneScriptPath(GetCurrentScriptDirectory() ~ "./../../system/ReplaySaveScene.dnh");
+
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	StartSpell;
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 120, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "../images/HermioneChibi.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 71, 74); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(60);
+	let geminiA = CreateShotA2(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 2, 180, -0.022, 0, 859, 0);
+	ObjShot_SetSpellResist(geminiA, true);
+	let geminiB = CreateShotA2(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 2, 0, -0.022, 0, 860, 0);
+	ObjShot_SetSpellResist(geminiB, true);
+	wait(90);
+
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		let angleT = rand(0, 360);
+		spiral(geminiA, angleT + 180, -1, 0);
+		spiral(geminiA, angleT, -1, 0);
+		spiral(geminiB, angleT + 180, 1, 1);
+		spiral(geminiB, angleT, 1, 1);
+		wait(160);
+
+		let laserDuration = 480;
+		ObjMove_SetDestAtWeight(geminiA, 10, 10, 9, 3);
+		ObjMove_SetDestAtWeight(geminiB, GetStgFrameWidth() - 10, 10, 9, 3);
+		wait(70);
+		geminiLasers(geminiA, atan2(GetStgFrameHeight() - ObjMove_GetY(geminiA), GetStgFrameWidth() - ObjMove_GetX(geminiA)), laserDuration, 0);
+		geminiLasers(geminiB, atan2(GetStgFrameHeight() - ObjMove_GetY(geminiB), 0 - ObjMove_GetX(geminiB)),  laserDuration, 1);
+		
+		ObjMove_SetDestAtFrame(objBoss, 90, 90, 30);
+		wait(laserDuration/6);
+		leftBombard(laserDuration/3);
+		wait(laserDuration/3 + laserDuration/12);
+
+		ObjMove_SetDestAtFrame(objBoss, GetStgFrameWidth() - 90, 90, 30);
+		wait(laserDuration/6);
+		rightBombard(laserDuration/3);
+		wait(laserDuration/3 + laserDuration/12);
+
+		ObjMove_SetDestAtWeight(objBoss, GetCenterX(), 120, 9, 4);
+		ObjMove_SetDestAtWeight(geminiA, GetCenterX() - 100, 120, 9, 3);
+		ObjMove_SetDestAtWeight(geminiB, GetCenterX() + 100, 120, 9, 3);
+		wait(90);
+	}
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	
+	// this part only applies to spellcards, it's the spellcard bonus
+	if(ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SHOOTDOWN_COUNT)
+    +ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SPELL_COUNT) == 0){
+		AddScore(ObjEnemyBossScene_GetInfo(objScene, INFO_SPELL_SCORE));
+	}
+	
+	SetAutoDeleteObject(true);
+	killBossPhase(objBoss);
+	wait(120);
+	CloseScript(GetOwnScriptID());
+}
+
+task StartSpell {
+	let cutin = GetCurrentScriptDirectory ~ "../images/Hermione.png";
+	ObjCutin_SetSpellcardS4("Royal Maid - Bombarda Geminio", cutin, NAZRIN, 240, 240, 240);
+	ObjCutin_LaunchS3(NAZRIN, cutin, "Normal");
+	ObjEnemyBossScene_StartSpell(objScene);
+}
+
+task spiral(gemini, angleT, dir, graphicAux) {
+		let obj;
+		ascent(i in 0..70) {
+			if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+			PlaySound("Atk3", 30, 10);
+			let ballInterval = 16;
+			let initSpd = 1.6;
+
+			if (i % ballInterval == 0) {
+					let obj = CreateShotA1(ObjMove_GetX(gemini), ObjMove_GetY(gemini), initSpd, angleT, 279+graphicAux, 0);
+					ObjMove_AddPatternA2(obj, 90, initSpd, NO_CHANGE, -0.08, 0, 0);
+					ObjMove_AddPatternA4(obj, 180, 0, 0, +0.05, 0, 3, GetPlayerObjectID(), NO_CHANGE);
+			} else {
+					CreateShotA2(ObjMove_GetX(gemini), ObjMove_GetY(gemini), initSpd, angleT, +0.005, 3, 57+graphicAux*2, 0);
+			}
+			angleT += 9*dir;
+			wait(2);
+		}
+}
+
+task geminiLasers(gemini, angle, duration, graphicAux) {
+	let frame = 0;
+	let interval = 18;
+	let delay = 70;
+	while(frame < duration) {
+		if(frame % interval == 0) {
+			if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+			PlaySound("Laser2", 40, delay);
+			CreateStraightLaserA1(ObjMove_GetX(gemini), ObjMove_GetY(gemini), angle + rand(-40, 40), 800, 13, 30, 1009+graphicAux*2, delay);
+		}
+		frame++;
+		yield;
+	}
+}
+
+task leftBombard(duration) {
+	let frame = 0;
+	let interval = 2;
+	let maxxspd = 2;
+	let maxyspd = 2.8;
+	let delay = 20;
+	while(frame < duration) {
+		if(frame % interval == 0) {
+			if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+			PlaySound("Atk3", 40, delay);
+			CreateShotB2(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), rand(-maxxspd, 0), rand(-maxyspd, 0), maxxspd/150, maxyspd/150, 
+				maxxspd, maxyspd, 57, delay)
+		}
+		frame++;
+		yield;
+	}
+}
+
+task rightBombard(duration) {
+	let frame = 0;
+	let interval = 6;
+	let spd = 4;
+	let delay = 30;
+	let spawnWindow = 200;
+	let posAux = 0;
+	while(frame < duration) {
+		let bx = GetStgFrameWidth();
+		let by = 0;
+		if(frame % interval == 0) {
+			if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+			if(posAux==0) {
+				posAux = 1;
+				bx = rand(GetStgFrameWidth() - spawnWindow, GetStgFrameWidth());
+			} else {
+				posAux = 0;
+				by = rand(0, spawnWindow);
+			}
+			PlaySound("Laser1", 70, delay);
+			let obj = CreateCurveLaserA1(bx, by, spd, atan2(GetPlayerY() - by, GetPlayerX() - bx) + rand(-22, 22), 44, 9, 43, delay);
+			ObjCrLaser_SetTipDecrement(obj, 0);
+			/* ObjMove_AddPatternA2(obj, 20, spd, NO_CHANGE, -spd/50, rand(-0.01, 0.01), 2);
+			ObjMove_AddPatternA2(obj, 60, 2, NO_CHANGE, +spd/50, NO_CHANGE, spd*2); */
+			ObjMove_AddPatternA2(obj, 0, spd, NO_CHANGE, -spd/50, 0, 0.1);
+    ObjMove_AddPatternA2(obj, 60, NO_CHANGE, NO_CHANGE, +spd/60, 0, spd);
+		}
+		frame++;
+		yield;
+	}
+}
+
+
+

@@ -1,0 +1,104 @@
+#include "./skip_enemy_lib.dnh"
+#include "./skip_audio_lib.dnh"
+
+function GetCenterX(){ return GetStgFrameWidth() / 2; }		// 384 / 2
+function GetCenterY(){ return GetStgFrameHeight() / 2; }	// 448 / 2
+
+function wait(n){ loop(n){yield;} }
+
+function rand_int(min, max){ return round(rand(min, max)); }
+
+function objInField(obj) {
+	return (ObjMove_GetX(obj) > 15) && (ObjMove_GetX(obj) < (GetStgFrameWidth() - 15)) &&
+		(ObjMove_GetY(obj) > 15) && (ObjMove_GetY(obj) < (GetStgFrameHeight() - 15));
+}
+
+task delete(obj, time) {
+	wait(time);
+	ObjShot_FadeDelete(obj);
+}
+
+function ClearEnemiesBullets() {
+  let enemies = GetAllEnemyID();
+  ascent(i in 0..length(enemies)) {
+    Obj_Delete(enemies[i]);
+  }
+  DeleteShotAll(TYPE_SHOT, TYPE_FADE);
+}
+
+task ScreenShakeA1(shaketime, intensity){
+    while(shaketime > 0){
+        Set2DCameraFocusX(GetStgFrameWidth/2 + rand(-intensity, intensity));
+        Set2DCameraFocusY(GetStgFrameHeight/2 + rand(-intensity, intensity));
+        shaketime--;
+        yield;
+    }
+    Set2DCameraFocusX(GetStgFrameWidth/2);
+    Set2DCameraFocusY(GetStgFrameHeight/2);
+    yield;
+}
+
+task explode(x, y, size, alpha, frames) 
+{
+	let obj = ObjPrim_Create(OBJ_SPRITE_2D);
+	ObjPrim_SetTexture(obj, imgExplosion);
+	Obj_SetRenderPriority(obj, 0.65);
+	ObjRender_SetBlendType(obj, BLEND_ADD_ARGB);
+	ObjSprite2D_SetSourceRect(obj, 64, 1, 127, 63);
+	ObjSprite2D_SetDestCenter(obj);
+	ObjRender_SetPosition(obj, x, y, 0);
+	ObjRender_SetAngleZ(obj, rand(0, 360));
+	//ObjRender_SetColor(obj, 255, 0, 0);
+
+  let scale = size/64;
+	let scale_rate = scale/frames;
+	let alpha_rate = alpha/frames;
+	scale = 0;
+	while(alpha > 0)
+	{
+		ObjRender_SetAlpha(obj, alpha);
+    //ObjRender_SetColor(obj, alpha, alpha, alpha);
+		ObjRender_SetScaleXYZ(obj, scale, scale, 1);
+
+		scale += scale_rate;
+		alpha -= alpha_rate;
+		yield;
+	}
+	Obj_Delete(obj);
+}
+
+task killBossPhase(objBoss) {       // takes 90 frames total
+  let ex = ObjMove_GetX(objBoss);
+  let ey = ObjMove_GetY(objBoss);
+  ObjMove_SetMaxSpeed(objBoss, 0);
+  DeleteShotAll(TYPE_ALL, TYPE_FADE);
+  wait(20);
+  loop(2) {
+	  PlaySound("Defeat", 45, 0);
+	  explode(ex + rand(-20, 20), ey + rand(-20, 20), 90, 200, 45);
+    NotifyEventAll(EV_USER_STAGE+1, [ObjMove_GetX(objBoss), ObjMove_GetY(objBoss)]);    // calls the stage's boss phase item event
+    wait(20);
+  }
+  wait(30);
+  Obj_Delete(objBoss);
+}
+
+task killBoss(objBoss) {            // takes 180 frames total
+  let ex = ObjMove_GetX(objBoss);
+  let ey = ObjMove_GetY(objBoss);
+  ObjMove_SetMaxSpeed(objBoss, 0);
+  DeleteShotAll(TYPE_ALL, TYPE_FADE);
+  SetCommonData("bossActive", 0);
+  wait(30);
+	loop(3) {
+		PlaySound("Defeat", 45, 0);
+		explode(ex + rand(-20, 20), ey + rand(-20, 20), 90, 200, 45);
+    NotifyEventAll(EV_USER_STAGE+1, [ObjMove_GetX(objBoss), ObjMove_GetY(objBoss)]);    // calls the stage's boss phase item event
+		wait(20);
+	}
+  NotifyEventAll(EV_USER_STAGE+2, [ObjMove_GetX(objBoss), ObjMove_GetY(objBoss)]);    // calls the stage's boss end item event
+  Obj_Delete(objBoss);
+	PlaySound("Defeat", 65, 0);
+	explode(ex, ey, 200, 200, 90);
+  ScreenShakeA1(60, 4);
+}

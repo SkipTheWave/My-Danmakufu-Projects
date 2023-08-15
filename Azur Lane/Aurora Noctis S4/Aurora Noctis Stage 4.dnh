@@ -1,0 +1,69 @@
+#TouhouDanmakufu[Plural]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis Stage 4"]
+#Text["U-73 1, U-557 1, Belfast 2, Hermione 6"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#System["./../common/system/Default_System.txt"]
+
+
+let dir = GetCurrentScriptDirectory();
+let BGMstage = dir ~ "./Music/Ex Nihilo.ogg";
+let BGMboss = dir ~ "./Music/Battlefield.ogg";
+
+@Event{
+}
+
+@Initialize{
+	SetPauseScriptPath(GetCurrentScriptDirectory() ~ "../common/system/Pause.dnh");
+    SetEndSceneScriptPath(GetCurrentScriptDirectory() ~ "../common/system/EndScene.dnh");
+    SetReplaySaveSceneScriptPath(GetCurrentScriptDirectory() ~ "../common/system/ReplaySaveScene.dnh");
+	TPlural;
+}
+
+@MainLoop{
+	yield;
+}
+
+@Finalize{
+	RemoveSound(BGMstage);
+	RemoveSound(BGMboss);
+}
+
+task TPlural {
+	let obj = ObjEnemyBossScene_Create();
+	
+	ObjEnemyBossScene_Add(obj, 0, dir ~ "./singles/U-73 Nonspell 1.dnh");
+	ObjEnemyBossScene_Add(obj, 1, dir ~ "./singles/U-557 Nonspell 1.dnh");
+	ObjEnemyBossScene_Add(obj, 2, dir ~ "./singles/Belfast Nonspell 1.dnh");
+	ObjEnemyBossScene_Add(obj, 2, dir ~ "./singles/Belfast Spellcard 1.dnh");
+	ObjEnemyBossScene_Add(obj, 3, dir ~ "./singles/Hermione Nonspell 1.dnh");
+	ObjEnemyBossScene_Add(obj, 3, dir ~ "./singles/Hermione Spellcard 1.dnh");
+	ObjEnemyBossScene_Add(obj, 4, dir ~ "./singles/Hermione Nonspell 2.dnh");
+	ObjEnemyBossScene_Add(obj, 4, dir ~ "./singles/Hermione Spellcard 2.dnh");
+	ObjEnemyBossScene_Add(obj, 5, dir ~ "./singles/Hermione Nonspell 3.dnh");
+	ObjEnemyBossScene_Add(obj, 5, dir ~ "./singles/Hermione Spellcard 3.dnh");
+	
+	ObjEnemyBossScene_LoadInThread(obj);
+	ObjEnemyBossScene_Regist(obj);
+	music(obj);
+	
+	while(!Obj_IsDeleted(obj)) {
+		yield;
+	} 
+	
+	CloseScript(GetOwnScriptID());
+}
+
+task music(obj) {
+	LoadSound(BGMstage);
+	LoadSound(BGMboss);
+	let stepCount = ObjEnemyBossScene_GetInfo(obj, INFO_REMAIN_STEP_COUNT);
+	
+	PlayBGM(BGMstage, 53.5, 119.3);
+	while(ObjEnemyBossScene_GetInfo(obj, INFO_REMAIN_STEP_COUNT) >= 3) { yield; }
+	
+	StopSound(BGMstage);
+	PlayBGM(BGMboss, 0, 271.58);
+}
+
+function wait(n) { loop(n) { yield; } }

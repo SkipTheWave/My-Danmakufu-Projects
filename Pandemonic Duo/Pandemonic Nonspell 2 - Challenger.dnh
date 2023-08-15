@@ -1,0 +1,142 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["Pandemonic Duo - Nonspell 2 - Challenger"]
+#Text["\"Challenger\" difficulty"]
+#BGM["./Music/dBu - Pandemonic Planet.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#include "./CrispBrightShot/Shotconstants.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+
+let Hecatia;
+let Clownpiece;
+let startY = GetCenterY() - 100;
+let startX_Hecatia = GetCenterX() - 60;
+let startX_Clownpiece = GetCenterX() + 60;
+let objScene = GetEnemyBossSceneObjectID();
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(6000); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(50); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(300000); }
+}
+
+@Initialize{
+	SetPauseScriptPath(GetCurrentScriptDirectory() ~ "./system/Pause.dnh");
+    SetEndSceneScriptPath(GetCurrentScriptDirectory() ~ "./system/EndScene.dnh");
+    SetReplaySaveSceneScriptPath(GetCurrentScriptDirectory() ~ "./system/ReplaySaveScene.dnh");
+	
+	Hecatia = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	Clownpiece = ObjEnemy_Create(OBJ_ENEMY);
+	ObjEnemy_Regist(Hecatia);
+	ObjEnemy_Regist(Clownpiece);
+	
+	ObjMove_SetDestAtFrame(Hecatia, startX_Hecatia, startY, 60);
+	ObjMove_SetDestAtFrame(Clownpiece, startX_Clownpiece, startY, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(Hecatia, ObjMove_GetX(Hecatia), ObjMove_GetY(Hecatia), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(Hecatia, ObjMove_GetX(Hecatia), ObjMove_GetY(Hecatia), 24);
+	
+	ObjEnemy_SetIntersectionCircleToShot(Hecatia, ObjMove_GetX(Clownpiece), ObjMove_GetY(Clownpiece), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(Hecatia, ObjMove_GetX(Clownpiece), ObjMove_GetY(Clownpiece), 24);
+	yield;
+}
+
+task TDrawLoop {
+	let imgHecatia = GetCurrentScriptDirectory() ~ "Images/Hecatia2-s.png";
+	let imgClownpiece = GetCurrentScriptDirectory() ~ "Images/Clownpiece4-s.png";
+	ObjPrim_SetTexture(Hecatia, imgHecatia);
+	ObjPrim_SetTexture(Clownpiece, imgClownpiece);
+	ObjSprite2D_SetSourceRect(Hecatia, 1, 1, 52, 94); 	
+	ObjSprite2D_SetSourceRect(Clownpiece, 1, 1, 64, 86); 		
+	ObjSprite2D_SetDestCenter(Hecatia);
+	ObjSprite2D_SetDestCenter(Clownpiece);
+}
+
+task MainTask {
+	wait(120);
+	main;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(Hecatia, INFO_LIFE) > 0) { yield; }
+	Obj_Delete(Hecatia);
+	Obj_Delete(Clownpiece);
+	DeleteShotAll(TYPE_ALL, TYPE_IMMEDIATE);
+	SetAutoDeleteObject(true);
+	
+	PlaySound("Defeat", 50, 0);
+	wait(120);
+	CloseScript(GetOwnScriptID());
+}
+
+
+task main {
+	while(!Obj_IsDeleted(Hecatia)) {
+		shootChains;
+		wait(60);
+		shootStars(1, STAR_S_BLUE);
+		shootStars(-1, STAR_S_YELLOW);
+		wait(240);
+	}
+}
+
+task moveHecatia() {
+	let newX = rand(startX_Hecatia - 80, startX_Hecatia + 160);
+	let newY = rand(startY - 40, startY + 40);
+	ObjMove_SetDestAtWeight(Hecatia, newX, newY, 45, 5);
+}
+
+task moveClownpiece() {
+	let newX = rand(startX_Clownpiece - 160, startX_Clownpiece + 80);
+	let newY = rand(startY - 40, startY + 40);
+	ObjMove_SetDestAtWeight(Clownpiece, newX, newY, 45, 5);
+}
+
+task shootChains {
+	let angleT = GetAngleToPlayer(Hecatia);
+	let chainNum = 8;
+	let chainLength = 25;
+	
+	loop(chainLength) {
+		if(Obj_IsDeleted(Hecatia)) { return; }
+		PlaySound("Twinkle1", 40, 10);
+		ascent(i in 0..chainNum) {
+			let obj = CreateShotA1(ObjMove_GetX(Hecatia), ObjMove_GetY(Hecatia), 
+				5.5, angleT + i*360/chainNum, KUNAI_M_RED_INV, 20);
+		}
+		wait(5);
+		angleT += -2.5;
+	} 
+}
+
+task shootStars(dir, graphic) {
+	let angleT = rand(0, 359);
+	let starNum = 40;
+	let waveNum = 4;
+	let radius = 100;
+
+	loop(starNum) {
+		if(Obj_IsDeleted(Clownpiece)) { return; }
+		PlaySound("Twinkle1", 40, 10);
+		ascent(i in 0..waveNum) {
+			let angleS = angleT + i*360/waveNum;
+			let x = ObjMove_GetX(Clownpiece) + radius*cos(angleS);
+			let y = ObjMove_GetY(Clownpiece) + radius*sin(angleS);
+			
+			let obj = CreateShotA2(x, y, 6, angleS, -0.5, 0.5, graphic, 15);
+			ObjMove_AddPatternA2(obj, 90, 0.5, NO_CHANGE, +0.04, 0, 2.5);
+		}
+		wait(3);
+		angleT += 360/36*dir;
+		radius -= 6;
+	}
+}
+
+
+

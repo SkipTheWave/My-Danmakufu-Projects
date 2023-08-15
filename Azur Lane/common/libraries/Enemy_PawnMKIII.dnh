@@ -1,0 +1,88 @@
+// enemy constants
+let hitboxPawn = 36;
+
+// angle is angle, spd is initial speed, frames are the amount of frames it takes to halt
+task CreateEnemyPawnMKIIIA(x, y, spd, angle, difficulty) { 
+    let objEnemy = CreateEnemyPawnMKIII(x, y, 100, 3);
+    let angleS = 45;
+    if(angle > 90 && angle < 270) {
+        angleS = 135;
+    }
+    movementContA(objEnemy, spd, angle);
+    alternative (difficulty)
+    case (0) {      // Easy
+        PawnMKIIIBulletA(objEnemy, angleS, 60, 2, 4);
+    }
+    case (1) {      // Normal
+        PawnMKIIIBulletA(objEnemy, angleS, 60, 2, 4);
+    }
+    case (2) {      // Hard
+        PawnMKIIIBulletA(objEnemy, angleS, 60, 2.2, 4);
+    }
+    case (3) {        // Lunatic
+        PawnMKIIIBulletA(objEnemy, angleS, 60, 2, 4);
+    }
+}
+
+// angle is angle, spd is initial speed, frames are the amount of frames it takes to halt
+task CreateEnemyPawnMKIIIB(x, y, spd, angle, difficulty) { 
+    let objEnemy = CreateEnemyPawnMKIII(x, y, 70, 3);
+    let angleS = 25;
+    if(angle > 90 && angle < 270) {
+        angleS = 150;
+    }
+    movementContA(objEnemy, spd, angle);
+    alternative (difficulty)
+    case (0) {      // Easy
+        PawnMKIIIBulletA2(objEnemy, angleS, 60, 2, 4);
+    }
+    case (1) {      // Normal
+        PawnMKIIIBulletA2(objEnemy, angleS, 60, 2, 4);
+    }
+    case (2) {      // Hard
+        PawnMKIIIBulletA2(objEnemy, angleS, 50, 3, 4);
+    }
+    case (3) {        // Lunatic
+        PawnMKIIIBulletA2(objEnemy, angleS, 45, 3, 3);
+    }
+}
+
+/* Base enemy */
+function CreateEnemyPawnMKIII(x, y, life, points) {
+    return CreateEnemy(x, y, life, imgSiren, 58, 352, 58+75, 352+43, hitboxPawn, points);
+}
+
+
+/* Bullet tasks */
+
+// red diagonal lines
+task PawnMKIIIBulletA(objEnemy, angleS, interval, spd, nshots) {
+    // angleS = 45
+    while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) > 0) {
+        wait(interval);
+        ascent(j in 0..nshots) {
+            while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) <= 0) {return;}
+            ascent(i in 0..2) {
+                let obj = CreateShotA2(ObjMove_GetX(objEnemy), ObjMove_GetY(objEnemy), spd, angleS + i*180, -spd/60, spd/4, 130, 5);
+                ObjMove_AddPatternA2(obj, 180, spd/4, NO_CHANGE, +spd/90, 0, spd/2);
+            }
+            wait(4);
+        }
+    }
+}
+
+// similar to A, but greenish yellow, and "faster"
+task PawnMKIIIBulletA2(objEnemy, angleS, interval, spd, nshots) {
+    // angleS = 30
+    while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) > 0) {
+        wait(interval);
+        ascent(j in 0..nshots) {
+            while(ObjEnemy_GetInfo(objEnemy, INFO_LIFE) <= 0) {return;}
+            ascent(i in -1..2) {
+                let obj = CreateShotA2(ObjMove_GetX(objEnemy), ObjMove_GetY(objEnemy), spd, angleS + i*70, -spd/50, spd/10, 141, 5);
+                ObjMove_AddPatternA2(obj, 80, spd/10, NO_CHANGE, +spd/40, 0, spd/1.6);
+            }
+            wait(2);
+        }
+    }
+}

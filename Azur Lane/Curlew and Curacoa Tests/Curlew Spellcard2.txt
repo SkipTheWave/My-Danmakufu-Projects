@@ -1,0 +1,114 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["Curlew Tutorial Help 2 - \"Ceres-class Barrage A\""]
+#Text["Curlew is helping Skip follow[r]Danmakufu tutorials[r]Please be patient with them"]
+#BGM["./Aci-L.mp3"]
+#include "script/default_system/Default_ShotConst.txt"
+#include "script/Cutin/Cutin.txt"
+
+let objBoss;
+let objScene = GetEnemyBossSceneObjectID();
+
+@Event{
+    alternative(GetEventType())
+    case(EV_REQUEST_LIFE){ SetScriptResult(3000); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(60); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(100000); }
+}
+
+@Initialize{
+    objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+    ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	StartSpell;
+	
+    ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 60, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgCurlew = GetCurrentScriptDirectory() ~ "CurlewKaiChibi.png";
+	ObjPrim_SetTexture(objBoss, imgCurlew);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 55, 74); 			// 56x75 sprite
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(60);
+	movement;
+	fireA;
+	fireB;
+
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	
+	// this part only applies to spellcards, it's the spellcard bonus
+	if(ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SHOOTDOWN_COUNT)
+    +ObjEnemyBossScene_GetInfo(objScene, INFO_PLAYER_SPELL_COUNT) == 0){
+		AddScore(ObjEnemyBossScene_GetInfo(objScene, INFO_SPELL_SCORE));
+	}
+	
+	Obj_Delete(objBoss);
+	DeleteShotAll(TYPE_ALL, TYPE_IMMEDIATE);
+	SetAutoDeleteObject(true);
+	CloseScript(GetOwnScriptID());
+	return;
+}
+
+task StartSpell {
+	let cutin = GetCurrentScriptDirectory~"CurlewKaiS.png";
+	ObjCutin_SetSpellcardS4("Curlew - Ceres-class Barrage A", cutin, NAZRIN, 110, 190, 240);
+	ObjCutin_LaunchS3(YABUSAME, cutin, "Hard");
+	ObjEnemyBossScene_StartSpell(objScene);
+}
+
+task movement {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		ObjMove_SetDestAtFrame(objBoss, 
+			rand(GetCenterX() + 90, GetCenterX() - 90), 
+			rand(GetCenterY() - 60, GetCenterY() - 120), 60);
+		wait(120);
+	}
+}
+
+task fireA {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		let angleT = GetAngleToPlayer(objBoss) - 55;
+		loop(11) {
+			CreateShotA1(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 3.5, angleT, DS_RICE_S_YELLOW, 30);
+			CreateShotA1(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 4.5, angleT, DS_RICE_M_YELLOW, 30);
+			angleT += 110/11;
+		}
+		wait(60);
+	}
+}
+
+task fireB {
+	wait(60);
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		let angleT = GetAngleToPlayer(objBoss);
+		ascent(i in -10..11) {
+			ascent(j in 0..3) {
+				CreateShotA1(ObjMove_GetX(objBoss), ObjMove_GetY(objBoss),  2.5 - j,
+					angleT + i*9, DS_SCALE_SKY, 10);
+			}
+			wait(3);
+		}
+		wait(120);
+	}
+}
+
+function GetCenterX(){ return GetStgFrameWidth() / 2; }
+function GetCenterY(){ return GetStgFrameHeight() / 2; }
+function wait(n){ loop(n){yield;} }

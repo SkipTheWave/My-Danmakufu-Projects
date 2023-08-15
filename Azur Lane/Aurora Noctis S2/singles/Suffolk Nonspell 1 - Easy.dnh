@@ -1,0 +1,99 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["AL Aurora Noctis S1 - Suffolk Nonspell - Easy"]
+#Text["Azur Lane - Aurora Noctis[r]Stage 2 Miniboss"]
+#BGM["../music/Surrounding.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+
+let objBoss;
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(2600); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(16); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(120000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 120, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "../images/SuffolkChibi.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 53, 67); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(60);
+	shoot;
+	wait(60);
+	
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	SetAutoDeleteObject(true);
+	killBoss(objBoss);
+	wait(180);
+	CloseScript(GetOwnScriptID());
+}
+
+
+task shoot {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		let bossX = ObjMove_GetX(objBoss);
+		let bossY = ObjMove_GetY(objBoss);
+		
+		PlaySound("Charge", 50, 0);
+		wait(30);
+		let angleP = GetAngleToPlayer(objBoss);
+		
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+		PlaySound("Laser3", 70, 120);
+		CreateStraightLaserA1(bossX, bossY, angleP, 512, 30, 30, 1003, 120);
+		wait(100);
+		if(ObjEnemy_GetInfo(objBoss, INFO_LIFE) <= 0) { return; }
+		
+		// bubbles
+		let bInt = 50;
+		let angleB = angleP - bInt;
+		loop(3) {
+			ascent(i in 0..3) {
+				CreateShotA2(bossX, bossY, 4 + i*2, angleB, -0.15 - i*0.05, 1.2, 324, 20);
+			}
+			angleB += bInt;
+		}
+		
+		// small balls
+		bInt = 40;
+		angleB = angleP - bInt*0.5;
+		loop(2) {
+			ascent(i in 0..6) {
+				CreateShotA2(bossX, bossY, 5 + i, angleB + 3, -0.15 - i*0.025, 2.5, 30, 20);
+				CreateShotA2(bossX, bossY, 5 + i, angleB - 3, -0.15 - i*0.025, 2.5, 30, 20);
+			}
+			angleB += bInt;
+		}
+		wait(120);
+	}
+}
+
+

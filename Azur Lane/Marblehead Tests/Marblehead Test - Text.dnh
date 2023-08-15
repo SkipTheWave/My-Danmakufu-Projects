@@ -1,0 +1,101 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["AL Marblehead Tests - Text"]
+#Text["Testing lessons"]
+#BGM["./Infinity Chasers.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+
+let objBoss;
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(4000); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(40); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(200000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), GetCenterY - 100, 60);
+    TDrawLoop; 
+	//sprite;
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "MarbleheadSportChibi.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 51, 72); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+	
+	let name = ObjText_Create();
+	ObjText_SetText(name, "Marblehead");
+	ObjText_SetFontType(name, "Verdana");
+	ObjText_SetFontSize(name, 14);
+	ObjText_SetFontColorTop(name, 90, 120, 210);
+	ObjText_SetFontColorTop(name, 160, 190, 230);
+	ObjText_SetFontBold(name, true);
+	
+	ObjText_SetFontBorderType(name, BORDER_FULL);
+	ObjText_SetFontBorderWidth(name, 4);
+	ObjText_SetFontBorderColor(name, 60, 80, 220);
+	namePosition(name);
+}
+
+task namePosition(name) {
+	while(!Obj_IsDeleted(objBoss)) {
+		ObjRender_SetPosition(name, ObjMove_GetX(objBoss) - 50, ObjMove_GetY(objBoss) - 50, 1);
+		yield;
+	}
+}
+
+task MainTask {
+	wait(60);
+	shoot;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	SetAutoDeleteObject(true);
+	killBossPhase(objBoss);
+	wait(120);
+	CloseScript(GetOwnScriptID());
+}
+
+
+
+task shoot {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		let ex = ObjMove_GetX(objBoss);
+		let ey = ObjMove_GetY(objBoss);
+		
+		CreateShotA1(ex, ey, 5, GetAngleToPlayer(objBoss) + rand(-50, 50), [16, 88, 132, 201][rand_int(0, 3)], 10);
+		ObjMove_SetDestAtFrame(objBoss, GetCenterX() + rand(-50, 50), GetCenterY() - 100, 30);
+		
+		wait(45);
+	}
+}
+
+task sprite {
+	let balti = ObjPrim_Create(OBJ_SPRITE_2D);
+	let baltiImg = GetCurrentScriptDirectory() ~ "./BaltimoreSportChibi.png";
+	ObjPrim_SetTexture(balti, baltiImg);
+	ObjSprite2D_SetSourceRect(balti, 1, 1, 49, 74); 			
+	ObjSprite2D_SetDestCenter(balti);
+	ObjRender_SetPosition(balti, GetCenterX() - 80, GetCenterY() - 50, 1);
+}
+
+

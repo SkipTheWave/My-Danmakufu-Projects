@@ -1,0 +1,93 @@
+#TouhouDanmakufu[Single]
+#ScriptVersion[3]
+#Title["Genshin - Yoimiya - Nonspell 2"]
+#Text[""]
+#BGM["./../music/Inazuma Battle 2.ogg"]
+#Background["script/default_system/Default_Background_IceMountain.txt"]
+#include "script/Skip Scripts/common/AllStarShot/AllStarShot_Const.dnh"
+#include "script/Skip Scripts/common/libraries/skip_general_lib.dnh"
+
+let objBoss;
+
+@Event{
+	alternative(GetEventType())
+	case(EV_REQUEST_LIFE){ SetScriptResult(4000); }
+    case(EV_REQUEST_TIMER){ SetScriptResult(25); }
+    case(EV_REQUEST_SPELL_SCORE){ SetScriptResult(200000); }
+}
+
+@Initialize{
+	objBoss = ObjEnemy_Create(OBJ_ENEMY_BOSS);
+	ObjEnemy_Regist(objBoss);
+	SetCommonData("bossActive", 1);
+	
+	ObjMove_SetDestAtFrame(objBoss, GetCenterX(), 90, 60);
+    TDrawLoop; 
+    TFinalize;
+    MainTask;
+}
+
+@MainLoop{
+	ObjEnemy_SetIntersectionCircleToShot(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 32);
+	ObjEnemy_SetIntersectionCircleToPlayer(objBoss, ObjMove_GetX(objBoss), ObjMove_GetY(objBoss), 24);
+	
+	yield;
+}
+
+task TDrawLoop {
+	let imgBoss = GetCurrentScriptDirectory() ~ "../images/yoimiya-sprite.png";
+	ObjPrim_SetTexture(objBoss, imgBoss);
+	ObjSprite2D_SetSourceRect(objBoss, 1, 1, 77, 94); 			
+	ObjSprite2D_SetDestCenter(objBoss);
+}
+
+task MainTask {
+	wait(60);
+	fireA;
+	movement;
+}
+
+task TFinalize {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) { yield; }
+	SetAutoDeleteObject(true);
+	
+	killBossPhase(objBoss);
+	wait(120);
+	CloseScript(GetOwnScriptID());
+}
+
+
+task movement {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		ObjMove_SetDestAtFrame(objBoss, 
+			rand(GetCenterX() + 50, GetCenterX() - 50), 
+			rand(GetCenterY() - 80, GetCenterY() - 100), 30);
+		wait(100);
+	}
+}
+
+task fireA {
+	while(ObjEnemy_GetInfo(objBoss, INFO_LIFE) > 0) {
+		let angle = rand(0, 359);
+		loop(40) {
+			ascent(i in 0..3) {
+				starCluster(objBoss, angle + i*360/3);
+			}
+			angle += 16;
+			wait(5);
+		}
+		wait(120);
+	}
+}
+
+task starCluster(objBoss, angle) {
+	let x = ObjMove_GetX(objBoss);
+	let y = ObjMove_GetY(objBoss);
+	ascent(i in -1..2) {
+		let spd = 4 - absolute(i)/3;
+		let obj = CreateShotA2(x, y, spd, angle + i*4, -spd/50, spd/4, 163, 10);
+		if(i == 0) { Obj_SetRenderPriorityI(obj, GetShotRenderPriorityI()+1); }
+		ObjMove_AddPatternA2(obj, 50, NO_CHANGE, NO_CHANGE, 0, i, NO_CHANGE);
+		ObjMove_AddPatternA2(obj, 120, NO_CHANGE, NO_CHANGE, 0, 0, NO_CHANGE);
+	}
+}
